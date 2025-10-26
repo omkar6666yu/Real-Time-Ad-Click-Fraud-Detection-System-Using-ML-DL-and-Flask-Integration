@@ -1,0 +1,50 @@
+AdClickFraudDetection/
+├── README.md
+├── requirements.txt
+├── data/
+│   └── ad_clicks.csv            # put your dataset here
+├── preprocessing/
+│   └── preprocess.py
+├── models/
+│   ├── ml_models.py
+│   ├── dl_models.py
+│   ├── stacking.py
+│   └── train.py
+├── utils/
+│   └── evaluation.py
+├── app/
+│   ├── app.py
+│   └── templates/
+│       └── index.html
+└── notebooks/
+    └── experiments.ipynb        # optional; placeholder
+
+    
+
+    AdClickFraudDetection/
+│
+├── data/
+│   ├── ad_clicks.csv                # training dataset
+│   └── generate_synthetic_data.py   # optional synthetic data generator
+│
+├── preprocessing/
+│   └── preprocess.py                # data cleaning & feature engineering
+│
+├── models/
+│   ├── ml_models.py                 # ML algorithms
+│   ├── dl_models.py                 # DL architectures
+│   ├── stacking.py                  # ensemble meta model
+│   └── train.py                     # training & saving models
+│
+├── utils/
+│   └── evaluation.py                # performance metrics
+│
+├── app/
+│   ├── app.py                       # Flask web app / API
+│   └── templates/
+│       └── index.html               # web interface
+│
+├── requirements.txt
+├── README.md
+└── notebooks/
+    └── experiments.ipynb            # optional for testing/training

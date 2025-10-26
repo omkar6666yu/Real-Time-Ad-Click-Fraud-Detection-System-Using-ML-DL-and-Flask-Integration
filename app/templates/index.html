@@ -1,0 +1,51 @@
+ <!doctype html>
+<html>
+<head>
+  <title>Ad Click Fraud Detection</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; max-width: 700px;}
+    input, select { width: 100%; padding: 8px; margin: 6px 0; }
+    button { padding: 10px 20px; }
+    .result { margin-top: 20px; padding: 12px; border-radius: 6px; border:1px solid #ddd; background:#f8f8f8;}
+  </style>
+</head>
+<body>
+  <h2>Ad Click Fraud Detection — Demo</h2>
+  <form id="frm">
+    <label>IP Address</label>
+    <input type="text" name="ip" value="192.168.1.1" />
+    <label>App ID</label>
+    <input type="text" name="app_id" value="app_3" />
+    <label>Device</label>
+    <select name="device">
+      <option>mobile</option>
+      <option>tablet</option>
+      <option>desktop</option>
+    </select>
+    <label>Timestamp (ISO or "YYYY-MM-DD HH:MM:SS")</label>
+    <input type="text" name="timestamp" value="" placeholder="2025-10-12T12:00:00" />
+    <button type="button" onclick="predict()">Predict</button>
+  </form>
+
+  <div id="out" class="result"></div>
+
+  <script>
+    function predict(){
+      const form = document.getElementById('frm');
+      const data = new FormData(form);
+      fetch('/predict', { method: 'POST', body: data })
+        .then(res => res.json())
+        .then(j => {
+          document.getElementById('out').innerHTML = `
+            <strong>Result:</strong> ${j.label}<br/>
+            <strong>Final Probability:</strong> ${j.final_prob.toFixed(3)} <br/>
+            <strong>ML Prob:</strong> ${j.ml_prob.toFixed(3)} |
+            <strong>DL Prob:</strong> ${j.dl_prob.toFixed(3)}
+          `;
+        }).catch(e => {
+          document.getElementById('out').innerText = 'Error: ' + e;
+        });
+    }
+  </script>
+</body>
+</html>
