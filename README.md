@@ -45,7 +45,7 @@ The system is deployed via a Flask web application, enabling users to input clic
 4. XGBoost
 5. LightGBM
 6. NumPy, Pandas
-7. GeoIP2
+7. GeoIP2 #⚠️ Note: GeoLite2 database is not included. Download from MaxMind.
 
 ---
 
@@ -58,3 +58,71 @@ The system is deployed via a Flask web application, enabling users to input clic
 - https://www.kaggle.com/competitions/talkingdata-adtracking-fraud-detection
 - https://scikit-learn.org
 - https://www.tensorflow.org
+
+
+## 🌐 Supernova — Interactive Fraud Simulation Environment #⚠️ Note: while opening the supernova make sure u open it from folder file not from live server
+
+Supernova (ShopNova) is a real-time interactive demo platform built to simulate an e-commerce environment where ad click fraud detection can be visualized live.
+
+It allows users to generate both legitimate and fraudulent clicks and observe how the system detects anomalies using engineered fraud signals.
+
+---
+
+### Key Capabilities
+
+- Simulated e-commerce website (ads, products, user interactions)
+- Bot simulation using draggable "Bot Ball"
+- Trigger-based fraud generation (18 engineered fraud signals)
+- Real-time API integration with Flask backend
+- Live fraud monitoring dashboard
+- GeoIP-based location tracking
+- Continuous click streaming using SSE (Server-Sent Events)
+
+---
+
+### Fraud Simulation Features
+
+Supernova enables testing of multiple fraud scenarios:
+
+- Click burst attacks (high frequency clicks)
+- Device and OS mismatch
+- Impossible geo-location switching
+- Subnet-based bot attacks
+- Low inter-click intervals (ICI)
+- High CTR anomalies
+- User-Agent spoofing
+
+---
+
+### Interactive Testing
+
+Users can:
+
+- Click normally → simulate legitimate traffic
+- Drag and drop bot → simulate automated fraud
+- Trigger specific fraud patterns manually
+- Observe system response in real time
+
+---
+
+### Integration
+
+Supernova connects to backend APIs:
+
+- `/api/predict` — real-time fraud prediction
+- `/api/track` — click tracking from website
+- `/api/stream` — live event monitoring
+
+---
+
+### Purpose
+
+The goal of Supernova is to:
+
+- Demonstrate real-world fraud detection behavior
+- Provide a visual and interactive testing environment
+- Help understand how ML models respond to different attack patterns
+
+---
+
+---
