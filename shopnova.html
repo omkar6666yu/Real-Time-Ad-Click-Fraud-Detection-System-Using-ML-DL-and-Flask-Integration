@@ -387,10 +387,28 @@ function mkBot(ip,hour){return{ip,app_id:pick(['3521','892','1204','4401']),devi
 
 const HUM=['203.45.12.8','176.32.91.4','98.12.45.67','64.233.160.1','185.60.216.35'];
 const GHRS=[9,10,11,14,15,16,17,18,20];
-const DEVS=['Mobile','Desktop','Tablet'];
-function hPay(){return{app_id:String(ri(5000)+100),device:pick(DEVS),os:Math.random()>.5?'Android':'iOS',channel:String(ri(400)+10),hour:pick(GHRS)};}
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//const DEVS=['Mobile','Desktop','Tablet'];
+//function hPay(){return{app_id:String(ri(5000)+100),device:pick(DEVS),os:Math.random()>.5?'Android':'iOS',channel:String(ri(400)+10),hour:pick(GHRS)};}
+// Detect REAL device and OS from the actual browser
+function getRealDevice(){
+  const ua=navigator.userAgent;
+  if(/tablet|ipad|playbook|silk/i.test(ua)) return 'Tablet';
+  if(/mobile|android|iphone|ipod|blackberry|opera mini|iemobile/i.test(ua)) return 'Mobile';
+  return 'Desktop';
+}
+function getRealOS(){
+  const ua=navigator.userAgent;
+  if(/windows/i.test(ua))  return 'Windows';
+  if(/android/i.test(ua))  return 'Android';
+  if(/iphone|ipad|ios/i.test(ua)) return 'iOS';
+  if(/mac/i.test(ua))      return 'macOS';
+  if(/linux/i.test(ua))    return 'Linux';
+  return 'Unknown';
+}
+function hPay(){return{app_id:String(ri(5000)+100),device:getRealDevice(),os:getRealOS(),channel:String(ri(400)+10),hour:new Date().getHours(),source:'shopnova-human',user_agent:navigator.userAgent};}
 // Build floating trigger panel (replaces sidebar panel)
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const trigPanel=document.createElement('div');
 trigPanel.id='trig-panel';
 trigPanel.style.cssText='position:fixed;top:80px;right:16px;width:220px;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:10px;z-index:9980;padding:12px;display:none;flex-direction:column;gap:5px;max-height:70vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4);';
@@ -542,6 +560,52 @@ document.getElementById('sw').addEventListener('click',e=>{
 });
 </script>
 <!-- AdFraud Shield Tracking Script — supernova -->
+<!-- AdFraud Shield Tracking Script — supernova -->
+<script>
+(function() {
+  var _afs = {
+    endpoint: 'http://192.168.43.91:5000/api/track',
+    api_key:  'b4cfd8a6a224624c82d9d6d905946d4826d05fb3a58a4e8d634f9a530711b752'
+  };
+  function _getDevice() {
+    var ua = navigator.userAgent;
+    if (/tablet|ipad/i.test(ua)) return 'Tablet';
+    if (/mobile|android|iphone/i.test(ua)) return 'Mobile';
+    return 'Desktop';
+  }
+  function _getOS() {
+    var ua = navigator.userAgent;
+    if (/android/i.test(ua)) return 'Android';
+    if (/iphone|ipad/i.test(ua)) return 'iOS';
+    if (/windows/i.test(ua)) return 'Windows';
+    if (/mac/i.test(ua)) return 'macOS';
+    return 'Linux';
+  }
+  function _track() {
+    fetch(_afs.endpoint, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        api_key:    _afs.api_key,
+        device:     _getDevice(),
+        os:         _getOS(),
+        hour:       new Date().getHours(),
+        page:       window.location.pathname,
+        user_agent: navigator.userAgent
+      })
+    }).catch(function(){});
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _track);
+  } else {
+    _track();
+  }
+  document.addEventListener('click', function(e) {
+    var t = e.target.closest('a,button,input[type=submit]');
+    if (t) setTimeout(_track, 50);
+  }, true);
+})();
+</script>
 <!--/////////////////////////////////////////////////////////////////////////////////////////////////-->
 </body>
 </html>

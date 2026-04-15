@@ -6,14 +6,18 @@
     <div class="page-sub">All {{ logs.total }} fraud detection predictions — paginated</div>
   </div>
   <div class="page-hdr-actions">
+    <button id="bulk-del-btn" onclick="bulkDelete()"
+      class="btn btn-danger btn-sm" style="display:none;">
+      🗑 Delete selected
+    </button>
     <a href="/records" class="btn btn-outline btn-sm">
       <svg viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
       Export CSV
     </a>
     <div style="display:flex;gap:6px;">
-      <a href="/logs?filter=all" class="btn {% if filter=='all' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">All</a>
+      <a href="/logs?filter=all"        class="btn {% if filter=='all' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">All</a>
       <a href="/logs?filter=Fraudulent" class="btn {% if filter=='Fraudulent' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">Fraud</a>
-      <a href="/logs?filter=Legitimate" class="btn {% if filter=='Legitimate' %}btn-outline{% else %}btn-outline{% endif %} btn-sm">Legit</a>
+      <a href="/logs?filter=Legitimate" class="btn {% if filter=='Legitimate' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">Legit</a>
     </div>
   </div>
 </div>
@@ -23,7 +27,9 @@
     <table>
       <thead>
         <tr style="background:var(--body-bg);">
-          <th style="background:var(--body-bg);"><input type="checkbox" style="cursor:pointer;"></th>
+          <th style="background:var(--body-bg);width:36px;">
+            <input type="checkbox" id="chk-all" style="cursor:pointer;">
+          </th>
           <th style="background:var(--body-bg);color:var(--blue);">#</th>
           <th style="background:var(--body-bg);color:var(--blue);">Timestamp</th>
           <th style="background:var(--body-bg);color:var(--blue);">IP Address</th>
@@ -40,8 +46,8 @@
       </thead>
       <tbody>
         {% for log in logs.items %}
-        <tr>
-          <td><input type="checkbox" style="cursor:pointer;"></td>
+        <tr id="row-{{ log.id }}" style="{% if log.marked == 'blocked' %}background:#fff5f5;{% elif log.marked == 'whitelisted' %}background:#f0fdf4;{% elif log.marked == 'reviewed' %}background:#eff6ff;{% endif %}">
+          <td><input type="checkbox" class="row-chk" data-id="{{ log.id }}" style="cursor:pointer;"></td>
           <td style="color:var(--ink2);font-size:11px;">#{{ log.id }}</td>
           <td class="mono" style="white-space:nowrap;">{{ log.timestamp }}</td>
           <td class="mono">{{ log.ip }}</td>
@@ -61,7 +67,42 @@
             </div>
           </td>
           <td style="font-size:11px;color:var(--ink2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ log.model_used }}</td>
-          <td class="tbl-actions"><button title="Details">&#8943;</button></td>
+
+          <td style="white-space:nowrap;">
+            <div style="display:inline-flex;gap:3px;align-items:center;">
+              <button onclick="openDetail({{ log.id }})" title="View full details"
+                style="background:none;border:1px solid var(--bdr);border-radius:5px;padding:3px 7px;cursor:pointer;font-size:12px;color:var(--ink2);">🔍</button>
+              <button onclick="markLog({{ log.id }},'{% if log.marked=='reviewed' %}{% else %}reviewed{% endif %}')"
+                title="{% if log.marked=='reviewed' %}Clear reviewed{% else %}Mark reviewed{% endif %}"
+                style="background:{% if log.marked=='reviewed' %}#dbeafe{% else %}none{% endif %};border:1px solid {% if log.marked=='reviewed' %}#93c5fd{% else %}var(--bdr){% endif %};border-radius:5px;padding:3px 7px;cursor:pointer;font-size:12px;color:{% if log.marked=='reviewed' %}#1d4ed8{% else %}var(--ink2){% endif %};">✓</button>
+              <button onclick="markLog({{ log.id }},'{% if log.marked=='blocked' %}{% else %}blocked{% endif %}')"
+                title="{% if log.marked=='blocked' %}Clear block{% else %}Block IP{% endif %}"
+                style="background:{% if log.marked=='blocked' %}#fde8ea{% else %}none{% endif %};border:1px solid {% if log.marked=='blocked' %}#fca5a5{% else %}var(--bdr){% endif %};border-radius:5px;padding:3px 7px;cursor:pointer;font-size:12px;color:{% if log.marked=='blocked' %}var(--acc){% else %}var(--ink2){% endif %};">🚫</button>
+              <button onclick="markLog({{ log.id }},'{% if log.marked=='whitelisted' %}{% else %}whitelisted{% endif %}')"
+                title="{% if log.marked=='whitelisted' %}Clear whitelist{% else %}Whitelist{% endif %}"
+                style="background:{% if log.marked=='whitelisted' %}#dcfce7{% else %}none{% endif %};border:1px solid {% if log.marked=='whitelisted' %}#86efac{% else %}var(--bdr){% endif %};border-radius:5px;padding:3px 7px;cursor:pointer;font-size:12px;color:{% if log.marked=='whitelisted' %}#15803d{% else %}var(--ink2){% endif %};">✅</button>
+              <button onclick="openNotes({{ log.id }}, '{{ (log.notes or '')|replace("'","\\'")|replace('"','\\"') }}')"
+                title="{% if log.notes %}Edit note{% else %}Add note{% endif %}"
+                style="background:{% if log.notes %}#fef9c3{% else %}none{% endif %};border:1px solid {% if log.notes %}#fde047{% else %}var(--bdr){% endif %};border-radius:5px;padding:3px 7px;cursor:pointer;font-size:12px;color:{% if log.notes %}#a16207{% else %}var(--ink2){% endif %};">📝</button>
+              <button onclick="deleteLog({{ log.id }})" title="Delete record"
+                style="background:none;border:1px solid var(--bdr);border-radius:5px;padding:3px 7px;cursor:pointer;font-size:12px;color:var(--acc);">🗑</button>
+            </div>
+            {% if log.marked or log.notes %}
+            <div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap;">
+              {% if log.marked %}
+              <span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;
+                {% if log.marked=='blocked' %}background:#fde8ea;color:#c0152b;
+                {% elif log.marked=='whitelisted' %}background:#dcfce7;color:#15803d;
+                {% else %}background:#dbeafe;color:#1d4ed8;{% endif %}">{{ log.marked|upper }}</span>
+              {% endif %}
+              {% if log.notes %}
+              <span style="font-size:8px;padding:1px 5px;border-radius:3px;background:#fef9c3;color:#a16207;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ log.notes }}">
+                📝 {{ log.notes[:25] }}{% if log.notes|length > 25 %}…{% endif %}
+              </span>
+              {% endif %}
+            </div>
+            {% endif %}
+          </td>
         </tr>
         {% else %}
         <tr><td colspan="13" style="text-align:center;padding:32px;color:var(--ink2);">No predictions yet. Go to <a href="/" style="color:var(--blue);">Predict</a> to start.</td></tr>
@@ -74,7 +115,7 @@
     <div class="pag-info">Showing {{ logs.items|length }} of {{ logs.total }} entries</div>
     <div style="display:flex;align-items:center;gap:12px;">
       <div class="display-select">
-        Display <select onchange="window.location='/logs?page=1'"><option>50</option></select> per page
+        Display <select onchange="window.location='/logs?page=1&filter={{ filter }}'"><option>50</option></select> per page
       </div>
       <div class="pag">
         {% if logs.has_prev %}
@@ -83,6 +124,8 @@
         {% for p in logs.iter_pages() %}
           {% if p %}
           <a href="/logs?page={{ p }}&filter={{ filter }}" class="pag-btn {% if p == logs.page %}active{% endif %}">{{ p }}</a>
+          {% else %}
+          <span class="pag-btn" style="cursor:default;opacity:.4;">…</span>
           {% endif %}
         {% endfor %}
         {% if logs.has_next %}
@@ -92,4 +135,166 @@
     </div>
   </div>
 </div>
+
+<!-- DETAIL MODAL -->
+<div id="detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--card-bg);border-radius:14px;padding:24px;width:100%;max-width:580px;margin:16px;border:1px solid var(--bdr);max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink);">Prediction Detail</div>
+        <div id="detail-id" style="font-size:11px;color:var(--ink2);margin-top:2px;"></div>
+      </div>
+      <button onclick="closeDetail()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink2);line-height:1;">&#215;</button>
+    </div>
+    <div id="detail-body" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;"></div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px;">Notes</label>
+      <textarea id="detail-notes" rows="2"
+        style="width:100%;background:var(--body-bg);border:1px solid var(--bdr2);border-radius:8px;padding:8px 10px;color:var(--ink);font-size:12px;resize:vertical;outline:none;font-family:inherit;"
+        placeholder="Add investigation notes…"></textarea>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;">
+      <button onclick="saveNotes()" class="btn btn-blue btn-sm">💾 Save notes</button>
+      <button onclick="markFromDetail('reviewed')"    class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;">✓ Reviewed</button>
+      <button onclick="markFromDetail('blocked')"     class="btn btn-danger btn-sm">🚫 Block IP</button>
+      <button onclick="markFromDetail('whitelisted')" class="btn btn-success btn-sm">✅ Whitelist</button>
+      <button onclick="markFromDetail('')"            class="btn btn-ghost btn-sm">✕ Clear mark</button>
+      <button onclick="deleteFromDetail()" class="btn btn-danger btn-sm" style="margin-left:auto;">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTES QUICK MODAL -->
+<div id="notes-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1001;align-items:center;justify-content:center;">
+  <div style="background:var(--card-bg);border-radius:12px;padding:20px;width:100%;max-width:420px;margin:16px;border:1px solid var(--bdr);">
+    <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:12px;">Note — #<span id="notes-id"></span></div>
+    <textarea id="notes-text" rows="3"
+      style="width:100%;background:var(--body-bg);border:1px solid var(--bdr2);border-radius:8px;padding:8px 10px;color:var(--ink);font-size:13px;resize:none;outline:none;font-family:inherit;"
+      placeholder="Type your note…"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button onclick="saveQuickNote()" class="btn btn-blue" style="flex:1;justify-content:center;">Save</button>
+      <button onclick="document.getElementById('notes-modal').style.display='none'" class="btn btn-outline">Cancel</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let _curId = null;
+
+// ── SELECT ALL ──────────────────────────────────────────────────────────────
+document.getElementById('chk-all').addEventListener('change', function(){
+  document.querySelectorAll('.row-chk').forEach(c => c.checked = this.checked);
+  updateBulkBtn();
+});
+document.querySelectorAll('.row-chk').forEach(c => c.addEventListener('change', updateBulkBtn));
+function updateBulkBtn(){
+  const n   = document.querySelectorAll('.row-chk:checked').length;
+  const btn = document.getElementById('bulk-del-btn');
+  btn.style.display = n > 0 ? 'inline-flex' : 'none';
+  btn.textContent   = '🗑 Delete selected (' + n + ')';
+}
+
+// ── BULK DELETE ─────────────────────────────────────────────────────────────
+function bulkDelete(){
+  const ids = [...document.querySelectorAll('.row-chk:checked')].map(c => parseInt(c.dataset.id));
+  if(!ids.length) return;
+  if(!confirm('Permanently delete ' + ids.length + ' record(s)?')) return;
+  fetch('/logs/delete_bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})})
+    .then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); });
+}
+
+// ── DELETE SINGLE ───────────────────────────────────────────────────────────
+function deleteLog(id){
+  if(!confirm('Delete this prediction record?')) return;
+  fetch('/logs/delete/'+id,{method:'POST'})
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){
+        const row=document.getElementById('row-'+id);
+        if(row){ row.style.transition='opacity .3s'; row.style.opacity='0'; setTimeout(()=>row.remove(),300); }
+      }
+    });
+}
+
+// ── MARK ────────────────────────────────────────────────────────────────────
+function markLog(id, mark){
+  fetch('/logs/mark/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mark})})
+    .then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); });
+}
+
+// ── QUICK NOTES MODAL ───────────────────────────────────────────────────────
+function openNotes(id, current){
+  _curId = id;
+  document.getElementById('notes-id').textContent = id;
+  document.getElementById('notes-text').value = current || '';
+  document.getElementById('notes-modal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('notes-text').focus(), 50);
+}
+function saveQuickNote(){
+  if(!_curId) return;
+  const notes = document.getElementById('notes-text').value.trim();
+  fetch('/logs/mark/'+_curId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes})})
+    .then(r=>r.json()).then(d=>{ if(d.ok){ document.getElementById('notes-modal').style.display='none'; location.reload(); } });
+}
+
+// ── DETAIL MODAL ────────────────────────────────────────────────────────────
+function openDetail(id){
+  _curId = id;
+  fetch('/logs/detail/'+id)
+    .then(r=>r.json())
+    .then(d=>{
+      document.getElementById('detail-id').textContent = '#'+d.id+' · '+d.timestamp;
+      const SHOW = [
+        ['IP Address',d.ip],['Country',d.country||'—'],
+        ['Device',d.device],['OS',d.os],
+        ['Hour',d.hour+':00'],['Velocity',d.velocity],
+        ['Signals',d.signals],['App ID',d.app_id],
+        ['Channel',d.channel],['Model',d.model_used],
+        ['Result', d.result === 'Fraudulent'
+          ? '<span style="background:#fde8ea;color:#c0152b;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">Fraudulent</span>'
+          : '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">Legitimate</span>'],
+        ['Confidence',d.confidence+'%'],
+        ['Mark status', d.marked
+          ? '<span style="background:'+(d.marked==='blocked'?'#fde8ea':d.marked==='whitelisted'?'#dcfce7':'#dbeafe')+';color:'+(d.marked==='blocked'?'#c0152b':d.marked==='whitelisted'?'#15803d':'#1d4ed8')+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">'+d.marked.toUpperCase()+'</span>'
+          : '—'],
+      ];
+      document.getElementById('detail-body').innerHTML = SHOW.map(([k,v])=>
+        '<div style="background:var(--body-bg);border-radius:7px;padding:9px 11px;">' +
+        '<div style="font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">'+k+'</div>' +
+        '<div style="font-size:12px;font-weight:500;color:var(--ink);">'+v+'</div></div>'
+      ).join('');
+      document.getElementById('detail-notes').value = d.notes || '';
+      document.getElementById('detail-modal').style.display = 'flex';
+    });
+}
+function closeDetail(){
+  document.getElementById('detail-modal').style.display='none';
+  _curId=null;
+}
+function saveNotes(){
+  if(!_curId) return;
+  const notes=document.getElementById('detail-notes').value.trim();
+  fetch('/logs/mark/'+_curId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes})})
+    .then(r=>r.json()).then(d=>{ if(d.ok){ closeDetail(); location.reload(); } });
+}
+function markFromDetail(mark){
+  if(!_curId) return;
+  fetch('/logs/mark/'+_curId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mark})})
+    .then(r=>r.json()).then(d=>{ if(d.ok){ closeDetail(); location.reload(); } });
+}
+function deleteFromDetail(){
+  if(!_curId) return;
+  if(!confirm('Delete this prediction record?')) return;
+  fetch('/logs/delete/'+_curId,{method:'POST'})
+    .then(r=>r.json()).then(d=>{ if(d.ok){ closeDetail(); location.reload(); } });
+}
+
+// ── CLOSE ON BACKDROP / ESC ─────────────────────────────────────────────────
+document.getElementById('detail-modal').addEventListener('click',function(e){ if(e.target===this) closeDetail(); });
+document.getElementById('notes-modal').addEventListener('click',function(e){ if(e.target===this) this.style.display='none'; });
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){ closeDetail(); document.getElementById('notes-modal').style.display='none'; }
+});
+</script>
 {% endblock %}

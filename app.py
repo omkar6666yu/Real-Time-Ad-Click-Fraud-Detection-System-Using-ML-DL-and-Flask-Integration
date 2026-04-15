@@ -178,6 +178,8 @@ class Prediction(db.Model):
     velocity   = db.Column(db.String(10), default='LOW')
     signals    = db.Column(db.Integer, default=0)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    marked     = db.Column(db.String(20), default='')   # 'reviewed', 'blocked', 'whitelisted', ''
+    notes      = db.Column(db.String(200), default='')
 
     def to_dict(self):
         return {'id':self.id,'timestamp':self.timestamp,'ip':self.ip,
@@ -185,7 +187,8 @@ class Prediction(db.Model):
                 'channel':self.channel,'hour':self.hour,'result':self.result,
                 'confidence':round(self.confidence or 0, 1),'model_used':self.model_used,
                 'country':self.country or 'Unknown','velocity':self.velocity or 'LOW',
-                'signals':self.signals or 0}
+                'signals':self.signals or 0,
+                'marked':self.marked or '', 'notes':self.notes or ''}  # ADD THIS LINE
 
 class DriftLog(db.Model):
     id        = db.Column(db.Integer, primary_key=True)
@@ -1157,10 +1160,14 @@ def api_track():
     except:
         db.session.rollback()
 
-    ip = (request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
-          request.headers.get('X-Real-IP','').strip() or
-          request.headers.get('CF-Connecting-IP','') or
-          request.remote_addr or '0.0.0.0')
+    #ip = (request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
+    #     request.headers.get('X-Real-IP','').strip() or
+    #     request.headers.get('CF-Connecting-IP','') or
+    #      request.remote_addr or '0.0.0.0')
+    ip = (data.get('ip','').strip() or
+      request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
+      request.headers.get('X-Real-IP','').strip() or
+      request.remote_addr or '0.0.0.0')
 
     device  = data.get('device', 'Desktop')
     os_name = data.get('os', 'Windows')
@@ -1375,7 +1382,45 @@ def download_csv():
         mimetype='text/csv',
         headers={'Content-Disposition': f'attachment; filename={filename}'}
     )
+###############################################################################################################################################################
+# ── LOG ACTIONS ────────────────────────────────────────────────────────────────
+@app.route('/logs/delete/<int:pid>', methods=['POST'])
+@login_required
+def log_delete(pid):
+    p = Prediction.query.get_or_404(pid)
+    db.session.delete(p)
+    db.session.commit()
+    return jsonify({'ok': True})
 
+
+@app.route('/logs/mark/<int:pid>', methods=['POST'])
+@login_required
+def log_mark(pid):
+    p     = Prediction.query.get_or_404(pid)
+    mark  = request.json.get('mark', '')   # 'reviewed' | 'blocked' | 'whitelisted' | ''
+    notes = request.json.get('notes', p.notes or '')
+    p.marked = mark
+    p.notes  = notes
+    db.session.commit()
+    return jsonify({'ok': True, 'marked': p.marked, 'notes': p.notes})
+
+
+@app.route('/logs/delete_bulk', methods=['POST'])
+@login_required
+def log_delete_bulk():
+    ids = request.json.get('ids', [])
+    if ids:
+        Prediction.query.filter(Prediction.id.in_(ids)).delete(synchronize_session=False)
+        db.session.commit()
+    return jsonify({'ok': True, 'deleted': len(ids)})
+
+
+@app.route('/logs/detail/<int:pid>')
+@login_required
+def log_detail(pid):
+    p = Prediction.query.get_or_404(pid)
+    return jsonify(p.to_dict())
+#########################################################################################################################################################################
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

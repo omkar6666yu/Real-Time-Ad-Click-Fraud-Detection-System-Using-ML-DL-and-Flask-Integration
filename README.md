@@ -45,7 +45,7 @@ The system is deployed via a Flask web application, enabling users to input clic
 4. XGBoost
 5. LightGBM
 6. NumPy, Pandas
-7. GeoIP2 #⚠️ Note: GeoLite2 database is not included. Download from MaxMind.
+7. GeoIP2 # Note: GeoLite2 database is not included. Download from MaxMind.
 
 ---
 
@@ -60,7 +60,7 @@ The system is deployed via a Flask web application, enabling users to input clic
 - https://www.tensorflow.org
 
 
-## 🌐 Supernova — Interactive Fraud Simulation Environment #⚠️ Note: while opening the supernova make sure u open it from folder file not from live server
+## 🌐 Supernova — Interactive Fraud Simulation Environment # Note: while opening the supernova make sure u open it from folder file not from live server
 
 Supernova (ShopNova) is a real-time interactive demo platform built to simulate an e-commerce environment where ad click fraud detection can be visualized live.
 
