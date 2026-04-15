@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+
+instance/
+*.db
+
+GeoLite2-Country.mmdb
+
+models/*.h5
+models/*.pkl
+
+.env
