@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div><div class="page-title">User Management</div><div class="page-sub">Admin panel — manage users, roles and access</div></div>
+</div>
+<div class="two-col">
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">All users</div><span class="badge b-info">{{ users|length }} total</span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr style="background:var(--body-bg);">
+          <th style="background:var(--body-bg);color:var(--blue);">#</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Username</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Email</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Role</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Created</th>
+        </tr></thead>
+        <tbody>{% for u in users %}<tr>
+          <td class="mono" style="color:var(--ink3);">{{ u.id }}</td>
+          <td style="font-weight:500;">{{ u.username }}</td>
+          <td style="font-size:11px;color:var(--ink2);">{{ u.email or '—' }}</td>
+          <td>{% if u.role=='admin' %}<span class="badge b-warning">ADMIN</span>{% else %}<span class="badge b-default">USER</span>{% endif %}</td>
+          <td style="font-size:11px;color:var(--ink2);">{{ u.created }}</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Add New User</div>
+    <form method="POST" action="/admin/users/add">
+      <div class="field"><label>Username</label><input name="username" required placeholder="username"></div>
+      <div class="field" style="margin-top:10px;"><label>Password</label><input name="password" type="password" required placeholder="password"></div>
+      <div class="field" style="margin-top:10px;"><label>Role</label>
+        <select name="role"><option value="user">User</option><option value="admin">Admin</option></select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:14px;width:100%;">Create user</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

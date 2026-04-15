@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AdFraud Shield — {{ request.path.strip('/').replace('_',' ').title() or 'Dashboard' }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sidebar-bg:#1e2130;--sidebar-w:220px;
+  --topbar-h:58px;--topbar-bg:#ffffff;
+  --body-bg:#f4f6fa;
+  --card-bg:#ffffff;
+  --ink:#1a1d2e;--ink2:#6b7280;--ink3:#9ca3af;
+  --acc:#e03546;--acc2:#ff4d5e;
+  --blue:#3b82f6;--blue2:#60a5fa;
+  --grn:#22c55e;--grn2:#16a34a;
+  --amb:#f59e0b;--red:#ef4444;--pur:#8b5cf6;
+  --bdr:#e5e7eb;--bdr2:#d1d5db;
+  --sidebar-text:rgba(255,255,255,.65);
+  --sidebar-text-active:#ffffff;
+  --sidebar-active-bg:rgba(224,53,70,.85);
+  --mono:'Courier New',monospace;
+  --sans:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--body-bg);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.6;display:flex;min-height:100vh;}
+
+/* ── SIDEBAR ──────────────────────────────────────────────────────────────── */
+.sidebar{width:var(--sidebar-w);background:var(--sidebar-bg);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:200;overflow-y:auto;overflow-x:hidden;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+.sb-brand{padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,.06);}
+.sb-logo{display:flex;align-items:center;gap:9px;}
+.sb-logo-icon{width:32px;height:32px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.sb-logo-icon svg{width:18px;height:18px;fill:#fff;}
+.sb-logo-text{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.02em;}
+.sb-logo-sub{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase;margin-top:1px;}
+.sb-section{padding:10px 0;}
+.sb-section-label{font-size:9px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.1em;padding:6px 20px 4px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 20px;text-decoration:none;color:var(--sidebar-text);font-size:12px;font-weight:500;transition:all .15s;position:relative;border-radius:0;cursor:pointer;}
+.sb-item:hover{color:var(--sidebar-text-active);background:rgba(255,255,255,.05);}
+.sb-item.active{color:var(--sidebar-text-active);background:var(--sidebar-active-bg);}
+.sb-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acc2);border-radius:0 2px 2px 0;}
+.sb-icon{width:16px;height:16px;flex-shrink:0;opacity:.8;}
+.sb-item.active .sb-icon{opacity:1;}
+.sb-item svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.sb-badge{margin-left:auto;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;}
+.sb-badge-red{background:var(--acc);color:#fff;}
+.sb-badge-blue{background:var(--blue);color:#fff;}
+.sb-badge-grn{background:var(--grn);color:#fff;}
+.sb-live{display:flex;align-items:center;gap:5px;margin-left:auto;}
+.sb-dot{width:6px;height:6px;border-radius:50%;background:var(--grn);animation:sbpulse 2s infinite;}
+@keyframes sbpulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-sub{padding-left:46px;}
+.sb-sub .sb-item{padding:7px 20px 7px 0;font-size:11px;color:rgba(255,255,255,.45);}
+.sb-sub .sb-item::before{display:none;}
+.sb-sub .sb-item.active{background:transparent;color:var(--acc2);}
+.sb-sub .sb-item::after{content:'·';position:absolute;left:-12px;color:rgba(255,255,255,.25);font-size:14px;}
+.sb-sub .sb-item.active::after{color:var(--acc2);}
+.sb-footer{margin-top:auto;padding:14px 20px;border-top:1px solid rgba(255,255,255,.06);}
+.sb-user{display:flex;align-items:center;gap:9px;}
+.sb-avatar{width:30px;height:30px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.sb-uname{font-size:12px;font-weight:500;color:#fff;}
+.sb-urole{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;}
+.sb-logout{margin-left:auto;color:rgba(255,255,255,.35);cursor:pointer;transition:color .15s;}
+.sb-logout:hover{color:#fff;}
+.sb-logout svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── MAIN AREA ────────────────────────────────────────────────────────────── */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+
+/* ── TOPBAR ───────────────────────────────────────────────────────────────── */
+.topbar{height:var(--topbar-h);background:var(--topbar-bg);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:100;gap:12px;}
+.tb-back{width:30px;height:30px;border-radius:8px;border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2);transition:all .15s;}
+.tb-back:hover{background:var(--body-bg);color:var(--ink);}
+.tb-back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.tb-breadcrumb{display:flex;align-items:center;gap:6px;flex:1;}
+.tb-page{font-size:15px;font-weight:600;color:var(--ink);}
+.tb-sep{color:var(--ink3);font-size:13px;}
+.tb-sub{font-size:13px;color:var(--ink2);}
+.tb-search{display:flex;align-items:center;gap:8px;background:var(--body-bg);border:1px solid var(--bdr);border-radius:8px;padding:6px 12px;width:220px;}
+.tb-search input{background:none;border:none;outline:none;font-size:12px;color:var(--ink);width:100%;font-family:var(--sans);}
+.tb-search input::placeholder{color:var(--ink3);}
+.tb-search svg{width:14px;height:14px;fill:none;stroke:var(--ink3);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.tb-icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2);transition:all .15s;position:relative;background:var(--topbar-bg);}
+.tb-icon-btn:hover{background:var(--body-bg);color:var(--ink);}
+.tb-icon-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.tb-notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--acc);border:2px solid #fff;}
+.tb-avatar{width:34px;height:34px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;}
+
+/* ── CONTENT ──────────────────────────────────────────────────────────────── */
+.content{flex:1;padding:24px 24px;}
+
+/* ── CARDS ────────────────────────────────────────────────────────────────── */
+.card{background:var(--card-bg);border:1px solid var(--bdr);border-radius:10px;padding:20px;}
+.card+.card{margin-top:12px;}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:600;color:var(--ink);}
+.card-sub{font-size:12px;color:var(--ink2);margin-top:2px;}
+
+/* ── STAT CARDS ───────────────────────────────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stat-card{background:var(--card-bg);border:1px solid var(--bdr);border-radius:10px;padding:18px 20px;display:flex;align-items:center;gap:14px;}
+.stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.si-red{background:rgba(224,53,70,.1);}
+.si-blue{background:rgba(59,130,246,.1);}
+.si-grn{background:rgba(34,197,94,.1);}
+.si-amb{background:rgba(245,158,11,.1);}
+.si-pur{background:rgba(139,92,246,.1);}
+.stat-icon svg{width:22px;height:22px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.si-red svg{stroke:var(--acc);}
+.si-blue svg{stroke:var(--blue);}
+.si-grn svg{stroke:var(--grn);}
+.si-amb svg{stroke:var(--amb);}
+.si-pur svg{stroke:var(--pur);}
+.stat-body{flex:1;}
+.stat-label{font-size:11px;color:var(--ink2);font-weight:500;margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em;}
+.stat-val{font-size:24px;font-weight:700;color:var(--ink);line-height:1;}
+.stat-trend{font-size:11px;margin-top:3px;}
+.trend-up{color:var(--acc);}
+.trend-dn{color:var(--grn);}
+
+/* ── TABLE ────────────────────────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead tr{border-bottom:1px solid var(--bdr);}
+th{font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:left;white-space:nowrap;background:var(--card-bg);}
+th.sortable{cursor:pointer;user-select:none;}
+th.sortable:hover{color:var(--ink);}
+td{padding:10px 12px;border-bottom:1px solid var(--bdr);color:var(--ink);font-size:12px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafafa;}
+.tbl-check{width:36px;}
+.tbl-img{width:36px;height:36px;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.tbl-actions button{background:none;border:none;color:var(--ink3);cursor:pointer;padding:2px 4px;font-size:14px;border-radius:4px;transition:color .13s;}
+.tbl-actions button:hover{color:var(--ink);}
+
+/* ── BADGES ───────────────────────────────────────────────────────────────── */
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;letter-spacing:.02em;}
+.b-danger{background:#fde8ea;color:#c0152b;}
+.b-success{background:#dcfce7;color:#15803d;}
+.b-warning{background:#fef9c3;color:#a16207;}
+.b-info{background:#dbeafe;color:#1d4ed8;}
+.b-default{background:#f3f4f6;color:#6b7280;}
+.b-fraud{background:#fde8ea;color:#c0152b;}
+.b-legit{background:#dcfce7;color:#15803d;}
+.b-high{background:#fde8ea;color:#c0152b;}
+.b-medium{background:#fef9c3;color:#a16207;}
+.b-low{background:#f3f4f6;color:#6b7280;}
+.b-stable{background:#dcfce7;color:#15803d;}
+.b-drifted{background:#fde8ea;color:#c0152b;}
+.b-ensemble{background:#dbeafe;color:#1d4ed8;}
+.b-dl{background:#f3e8ff;color:#7c3aed;}
+.b-ml{background:#f3f4f6;color:#6b7280;}
+
+/* ── FORMS ────────────────────────────────────────────────────────────────── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.form-row.three{grid-template-columns:1fr 1fr 1fr;}
+.form-row.full{grid-template-columns:1fr;}
+.field label{display:block;font-size:11px;font-weight:500;color:var(--ink2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field select,.field textarea{width:100%;background:#fff;border:1px solid var(--bdr2);border-radius:8px;padding:9px 12px;color:var(--ink);font-family:var(--sans);font-size:13px;outline:none;transition:border .15s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+.field select{cursor:pointer;}
+
+/* ── BUTTONS ──────────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;text-decoration:none;white-space:nowrap;}
+.btn-primary{background:var(--acc);color:#fff;}
+.btn-primary:hover{background:var(--acc2);}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-blue:hover{background:var(--blue2);}
+.btn-success{background:var(--grn);color:#fff;}
+.btn-success:hover{background:var(--grn2);}
+.btn-outline{background:#fff;color:var(--ink);border:1px solid var(--bdr2);}
+.btn-outline:hover{background:var(--body-bg);}
+.btn-ghost{background:transparent;color:var(--ink2);border:1px solid var(--bdr);}
+.btn-ghost:hover{background:var(--body-bg);}
+.btn-danger{background:#fde8ea;color:var(--acc);}
+.btn-danger:hover{background:#fccfd3;}
+.btn-purple{background:#f3e8ff;color:var(--pur);}
+.btn-purple:hover{background:#ede9fe;}
+.btn-sm{padding:5px 11px;font-size:11px;}
+.btn-lg{padding:11px 22px;font-size:14px;}
+.btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── PAGE HEADER ─────────────────────────────────────────────────────────── */
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+.page-title{font-size:18px;font-weight:700;color:var(--ink);}
+.page-sub{font-size:12px;color:var(--ink2);margin-top:3px;}
+.page-hdr-actions{display:flex;align-items:center;gap:8px;}
+
+/* ── PAGINATION ──────────────────────────────────────────────────────────── */
+.pag{display:flex;align-items:center;gap:4px;}
+.pag-btn{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--bdr);background:#fff;color:var(--ink2);transition:all .15s;}
+.pag-btn:hover,.pag-btn.active{background:var(--acc);color:#fff;border-color:var(--acc);}
+.pag-info{font-size:12px;color:var(--ink2);}
+
+/* ── MISC ────────────────────────────────────────────────────────────────── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.flash{background:#dcfce7;border:1px solid #bbf7d0;border-radius:8px;padding:10px 16px;color:#15803d;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.flash.error{background:#fde8ea;border-color:#fecdd3;color:#c0152b;}
+.mono{font-family:var(--mono);font-size:11px;}
+.conf-wrap{display:flex;align-items:center;gap:6px;}
+.conf-bar{width:50px;height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden;}
+.conf-fill{height:100%;border-radius:2px;}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.bar-lbl{font-size:11px;color:var(--ink2);width:140px;flex-shrink:0;}
+.bar-track{flex:1;height:7px;background:#f3f4f6;border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;background:var(--acc);transition:width .6s ease;}
+.bar-fill.grn{background:var(--grn);}
+.bar-fill.blue{background:var(--blue);}
+.bar-fill.amb{background:var(--amb);}
+.bar-pct{font-size:11px;font-weight:600;color:var(--ink);width:36px;text-align:right;}
+.shap-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.shap-lbl{font-size:10px;color:var(--ink2);width:110px;text-align:right;flex-shrink:0;}
+.shap-pos{height:10px;background:var(--acc);border-radius:2px;min-width:2px;}
+.shap-neg{height:10px;background:var(--grn);border-radius:2px;min-width:2px;}
+.shap-v{font-size:9px;color:var(--ink2);font-family:var(--mono);}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--body-bg);}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px;}
+.tbl-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 0 0;flex-wrap:wrap;gap:8px;}
+.display-select{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);}
+.display-select select{border:1px solid var(--bdr2);border-radius:6px;padding:3px 8px;font-size:12px;background:#fff;outline:none;}
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ──────────────────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div>
+        <div class="sb-logo-text">AdFraud Shield</div>
+        <div class="sb-logo-sub">Detection System</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-label">Main</div>
+
+    <a href="/" class="sb-item {% if request.path=='/' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Predict
+    </a>
+
+    <a href="/dashboard" class="sb-item {% if request.path=='/dashboard' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+
+    <a href="/realtime" class="sb-item {% if request.path=='/realtime' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Live Monitor
+      <div class="sb-live"><div class="sb-dot"></div></div>
+    </a>
+
+    <a href="/logs" class="sb-item {% if request.path=='/logs' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Logs
+    </a>
+
+    <a href="/records" class="sb-item {% if request.path=='/records' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+      Records &amp; Export
+      <span class="sb-badge sb-badge-blue">CSV</span>
+    </a>
+
+    <a href="/batch" class="sb-item {% if request.path=='/batch' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Batch Upload
+    </a>
+
+    <a href="/drift" class="sb-item {% if request.path=='/drift' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Model Drift
+    </a>
+
+    <a href="/tracking" class="sb-item {% if request.path=='/tracking' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Website Tracking
+      <span class="sb-badge sb-badge-grn">NEW</span>
+    </a>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-label">AI &amp; Alerts</div>
+
+    <a href="/agent" class="sb-item {% if request.path=='/agent' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>
+      AI Agent
+      <span class="sb-badge sb-badge-red">GPT</span>
+    </a>
+
+    {% if current_user.role == 'admin' %}
+    <a href="/alerts" class="sb-item {% if request.path=='/alerts' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Alerts
+    </a>
+
+    <a href="/admin/users" class="sb-item {% if request.path=='/admin/users' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      User Management
+    </a>
+
+    <a href="/admin/activity" class="sb-item {% if request.path=='/admin/activity' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      User Activity
+      <span class="sb-badge sb-badge-blue">ADMIN</span>
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-label">Settings</div>
+
+    <a href="/account" class="sb-item {% if request.path=='/account' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      My Account
+    </a>
+
+    <a href="/notifications" class="sb-item {% if request.path=='/notifications' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Notifications
+    </a>
+
+    <a href="/share" class="sb-item {% if request.path=='/share' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Share &amp; Export
+    </a>
+
+    {% if current_user.role == 'admin' %}
+    <a href="/set_keys" class="sb-item {% if request.path=='/set_keys' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Set API Keys
+    </a>
+    {% endif %}
+
+    <a href="/apidocs" target="_blank" class="sb-item">
+      <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      API Docs
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar">{{ current_user.username[0]|upper }}</div>
+      <div>
+        <div class="sb-uname">{{ current_user.username }}</div>
+        <div class="sb-urole">{{ current_user.role|upper }}</div>
+      </div>
+      <a href="/logout" class="sb-logout" title="Logout">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </a>
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()" title="Go back">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+
+    <div class="tb-breadcrumb">
+      <span class="tb-page" id="page-title">AdFraud Shield</span>
+    </div>
+
+    <div class="tb-search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Search..." id="global-search">
+    </div>
+
+    <!-- Notification bell -->
+    <a href="/notifications" class="tb-icon-btn" title="Notifications">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div class="tb-notif-dot"></div>
+    </a>
+
+    <!-- Share -->
+    <a href="/share" class="tb-icon-btn" title="Share / Export">
+      <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    </a>
+
+    <!-- Settings -->
+    <a href="/account" class="tb-icon-btn" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </a>
+
+    <div class="tb-avatar" title="{{ current_user.username }}">{{ current_user.username[0]|upper }}</div>
+  </div>
+
+  <!-- FLASH MESSAGES -->
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <div style="padding:12px 24px 0;">
+    <div class="flash">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      {{ messages[0] }}
+    </div>
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- PAGE CONTENT -->
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<script>
+// Set page title in topbar
+const pathMap = {
+  '/':'Predict & Analyse','/dashboard':'Dashboard','/realtime':'Live Monitor',
+  '/logs':'Prediction Logs','/records':'Records & Export','/batch':'Batch Upload',
+  '/drift':'Model Drift','/agent':'AI Agent','/alerts':'Alert Configuration',
+  '/admin/users':'User Management','/account':'My Account','/apidocs':'API Docs',
+  '/tracking':'Website Tracking','/admin/activity':'User Activity',
+  '/set_keys':'Set API Keys','/notifications':'Notifications','/share':'Share & Export'
+};
+const pt = document.getElementById('page-title');
+if(pt) pt.textContent = pathMap[window.location.pathname] || 'AdFraud Shield';
+
+// Global search — redirect to logs with search
+document.getElementById('global-search')?.addEventListener('keydown', function(e){
+  if(e.key==='Enter' && this.value.trim()){
+    window.location = '/logs?search=' + encodeURIComponent(this.value.trim());
+  }
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

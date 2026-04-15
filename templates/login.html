@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AdFraud Shield — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--acc:#e03546;--blue:#3b82f6;--ink:#1a1d2e;--ink2:#6b7280;--bdr:#e5e7eb;--bdr2:#d1d5db;--sans:'Inter',sans-serif;}
+body{background:#f4f6fa;font-family:var(--sans);min-height:100vh;display:flex;}
+.login-split{display:grid;grid-template-columns:1fr 1fr;min-height:100vh;}
+.login-left{background:#1e2130;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:48px;position:relative;overflow:hidden;}
+.login-left::before{content:'';position:absolute;top:-120px;right:-120px;width:400px;height:400px;background:rgba(224,53,70,.08);border-radius:50%;}
+.login-left::after{content:'';position:absolute;bottom:-80px;left:-80px;width:300px;height:300px;background:rgba(59,130,246,.06);border-radius:50%;}
+.ll-content{position:relative;z-index:1;text-align:center;max-width:340px;}
+.ll-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:48px;}
+.ll-icon{width:48px;height:48px;background:var(--acc);border-radius:14px;display:flex;align-items:center;justify-content:center;}
+.ll-icon svg{width:26px;height:26px;fill:#fff;}
+.ll-brand{font-size:20px;font-weight:700;color:#fff;letter-spacing:-.02em;}
+.ll-brand span{color:rgba(255,255,255,.4);font-weight:400;font-size:13px;display:block;margin-top:2px;}
+.ll-title{font-size:28px;font-weight:700;color:#fff;margin-bottom:12px;line-height:1.2;}
+.ll-desc{font-size:13px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:40px;}
+.ll-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.lls{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:16px 12px;text-align:center;}
+.lls-val{font-size:22px;font-weight:700;color:#fff;margin-bottom:3px;}
+.lls-lbl{font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em;}
+.lls-red .lls-val{color:var(--acc);}
+.lls-blue .lls-val{color:#60a5fa;}
+.lls-grn .lls-val{color:#4ade80;}
+.login-right{display:flex;align-items:center;justify-content:center;padding:48px;}
+.login-box{width:100%;max-width:400px;}
+.lb-header{margin-bottom:32px;}
+.lb-title{font-size:24px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.lb-sub{font-size:13px;color:var(--ink2);}
+.role-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;}
+.rtab{padding:11px;border:2px solid var(--bdr2);border-radius:9px;cursor:pointer;text-align:center;transition:all .15s;}
+.rtab:hover{border-color:#9ca3af;}
+.rtab.active{border-color:var(--acc);background:#fde8ea;}
+.rtab-icon{font-size:20px;margin-bottom:4px;}
+.rtab-name{font-size:12px;font-weight:600;color:var(--ink);}
+.rtab-desc{font-size:10px;color:var(--ink2);margin-top:1px;}
+.rtab.active .rtab-name{color:var(--acc);}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--ink2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
+.field input{width:100%;background:#fff;border:1px solid var(--bdr2);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:13px;font-family:var(--sans);outline:none;transition:border .15s;}
+.field input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(224,53,70,.1);}
+.login-btn{width:100%;background:var(--acc);color:#fff;border:none;border-radius:9px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .15s;font-family:var(--sans);}
+.login-btn:hover{background:#c0152b;}
+.flash-err{background:#fde8ea;border:1px solid #fecdd3;border-radius:8px;padding:10px 14px;color:#c0152b;font-size:12px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.login-footer{margin-top:24px;text-align:center;font-size:12px;color:var(--ink2);}
+.demo-creds{background:#f8faff;border:1px solid #dbeafe;border-radius:9px;padding:14px;margin-top:20px;}
+.dc-title{font-size:11px;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.dc-row{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);padding:3px 0;}
+.dc-val{font-family:monospace;font-size:12px;color:var(--ink);font-weight:500;}
+</style>
+</head>
+<body>
+<div class="login-split">
+
+  <!-- Left branding panel -->
+  <div class="login-left">
+    <div class="ll-content">
+      <div class="ll-logo">
+        <div class="ll-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div>
+          <div class="ll-brand">AdFraud Shield <span>Click Fraud Detection</span></div>
+        </div>
+      </div>
+      <div class="ll-title">Detect fraud before it costs you</div>
+      <div class="ll-desc">Real-time ML-powered click fraud detection with 18 engineered fraud signals, 9 models, and live monitoring.</div>
+      <div class="ll-stats">
+        <div class="lls lls-red"><div class="lls-val">97.4%</div><div class="lls-lbl">Accuracy</div></div>
+        <div class="lls lls-blue"><div class="lls-val">18</div><div class="lls-lbl">Features</div></div>
+        <div class="lls lls-grn"><div class="lls-val">9</div><div class="lls-lbl">Models</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right login form -->
+  <div class="login-right">
+    <div class="login-box">
+      <div class="lb-header">
+        <div class="lb-title">Welcome back</div>
+        <div class="lb-sub">Sign in to your AdFraud Shield account</div>
+      </div>
+
+      <div class="role-tabs">
+        <div class="rtab active" id="tab-user" onclick="setRole('user')">
+          <div class="rtab-icon">👤</div>
+          <div class="rtab-name">User</div>
+          <div class="rtab-desc">Standard access</div>
+        </div>
+        <div class="rtab" id="tab-admin" onclick="setRole('admin')">
+          <div class="rtab-icon">⚡</div>
+          <div class="rtab-name">Admin</div>
+          <div class="rtab-desc">Full control</div>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <div class="flash-err">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ messages[0] }}
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      <form method="post">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="Enter your username" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="login-btn">Sign In</button>
+      </form>
+
+      <div class="demo-creds">
+        <div class="dc-title">Demo credentials</div>
+        <div class="dc-row"><span>Admin access</span><span class="dc-val">admin / admin123</span></div>
+        <div class="dc-row"><span>User access</span><span class="dc-val">user / user123</span></div>
+      </div>
+
+      <div class="login-footer">AdFraud Shield v3 &mdash; Final Year Project</div>
+    </div>
+  </div>
+</div>
+<script>
+function setRole(r){
+  document.getElementById('tab-user').classList.toggle('active',r==='user');
+  document.getElementById('tab-admin').classList.toggle('active',r==='admin');
+  const u=document.querySelector('input[name="username"]');
+  const p=document.querySelector('input[name="password"]');
+  if(r==='admin'){u.value='admin';p.value='admin123';}
+  else{u.value='user';p.value='user123';}
+}
+</script>
+</body>
+</html>

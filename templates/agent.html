@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div><div class="page-title">AI Fraud Detection Agent</div><div class="page-sub">Ask Claude to investigate fraud, run analysis, generate reports and send alerts — all autonomously</div></div>
+</div>
+<div class="two-col">
+  <div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-title">Ask the agent</div>
+      <div class="field"><label>Your query</label>
+        <textarea id="agent-query" style="width:100%;background:#fff;border:1px solid var(--bdr2);border-radius:8px;padding:10px 12px;color:var(--ink);font-family:var(--sans);font-size:13px;outline:none;resize:vertical;min-height:90px;" placeholder="e.g. Is this click fraudulent? IP: 192.168.1.42, App: 3521, Mobile, Android, hour 2&#10;e.g. What is the current fraud rate and should I be worried?&#10;e.g. Generate a full fraud report for today"></textarea>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;">
+        <button class="btn btn-outline btn-sm" onclick="setQ('What is the current fraud rate and top fraud countries?')">Fraud summary</button>
+        <button class="btn btn-outline btn-sm" onclick="setQ('Investigate IP 192.168.1.42 and tell me if it should be blocked.')">Investigate IP</button>
+        <button class="btn btn-outline btn-sm" onclick="setQ('Generate a full fraud analysis report for today.')">Full report</button>
+        <button class="btn btn-outline btn-sm" onclick="setQ('Check if fraud rate is spiking and send an alert if needed.')">Check &amp; alert</button>
+      </div>
+      <button class="btn btn-purple" id="agent-btn" onclick="runAgent()" style="width:100%;">&#9654; Run AI agent</button>
+      <div id="agent-status" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:7px;font-size:12px;color:var(--pur);font-family:var(--mono);">Agent thinking...</div>
+    </div>
+    <div class="card" id="agent-result-card" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin:0;">Agent response</div>
+        <span id="tool-call-count" style="font-size:10px;color:var(--ink2);font-family:var(--mono);"></span>
+      </div>
+      <div id="agent-response" style="font-size:13px;color:var(--ink);line-height:1.7;white-space:pre-wrap;"></div>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <div class="card-title">What the agent can do</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        {% set tools = [
+          ('Analyse click','Run ML model on any click, returns confidence, SHAP, velocity, country'),
+          ('Get fraud stats','Query live database for total/fraud/legit counts and fraud rate'),
+          ('Get recent logs','Fetch recent predictions with filters — fraud only, legit only, or all'),
+          ('GeoIP breakdown','Show fraud count by country using IP geolocation'),
+          ('Send alert','Fire email and Telegram notification with custom subject and message'),
+          ('Generate report','Create full markdown fraud report with stats, geo data and recommendations')
+        ] %}
+        {% for name, desc in tools %}
+        <div style="background:var(--body-bg);border:1px solid var(--bdr);border-radius:7px;padding:10px 12px;">
+          <div style="font-size:12px;font-weight:600;color:var(--pur);margin-bottom:3px;">{{ name }}</div>
+          <div style="font-size:11px;color:var(--ink2);">{{ desc }}</div>
+        </div>{% endfor %}
+      </div>
+    </div>
+    {% if agent_logs %}
+    <div class="card" style="margin-top:12px;">
+      <div class="card-title">Recent queries</div>
+      {% for log in agent_logs %}
+      <div style="padding:8px 0;border-bottom:1px solid var(--bdr);">
+        <div style="font-size:11px;color:var(--ink2);margin-bottom:3px;">{{ log.timestamp }} &nbsp;·&nbsp; {{ log.tool_calls }} tool calls</div>
+        <div style="font-size:12px;color:var(--ink);">{{ log.query[:80] }}{% if log.query|length > 80 %}...{% endif %}</div>
+      </div>{% endfor %}
+    </div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function setQ(q){document.getElementById('agent-query').value=q;}
+function runAgent(){
+  const q=document.getElementById('agent-query').value.trim();
+  if(!q)return;
+  const btn=document.getElementById('agent-btn');
+  const status=document.getElementById('agent-status');
+  btn.disabled=true;btn.textContent='Running agent...';
+  status.style.display='block';
+  status.textContent='Agent thinking... calling tools...';
+  document.getElementById('agent-result-card').style.display='none';
+  fetch('/agent/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})})
+    .then(r=>r.json()).then(data=>{
+      btn.innerHTML='&#9654; Run AI agent';btn.disabled=false;
+      status.style.display='none';
+      document.getElementById('agent-response').textContent=data.response||data.error||'No response';
+      document.getElementById('tool-call-count').textContent=data.tool_calls+' tool calls';
+      document.getElementById('agent-result-card').style.display='block';
+    }).catch(e=>{
+      btn.innerHTML='&#9654; Run AI agent';btn.disabled=false;
+      status.textContent='Error: '+e.message;
+    });
+}
+</script>
+{% endblock %}

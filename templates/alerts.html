@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div><div class="page-title">Alert Configuration</div><div class="page-sub">Admin — configure email and Telegram notifications for fraud spikes and drift</div></div>
+  <div class="page-hdr-actions">
+    <a href="/set_keys" class="btn btn-blue btn-sm">Set API Keys</a>
+  </div>
+</div>
+<div class="two-col">
+  <div class="card">
+    <div class="card-title">Current config</div>
+    <table style="width:100%;">
+      <tr>
+        <td style="color:var(--ink2);padding:10px 0;font-size:12px;border-bottom:1px solid var(--bdr);">Email</td>
+        <td class="mono" style="font-size:11px;border-bottom:1px solid var(--bdr);">
+          {% if config.email %}<span style="color:var(--grn);">{{ config.email }}</span>{% else %}<span style="color:var(--acc);">Not configured</span>{% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--ink2);padding:10px 0;font-size:12px;border-bottom:1px solid var(--bdr);">Telegram</td>
+        <td class="mono" style="font-size:11px;border-bottom:1px solid var(--bdr);">
+          {% if config.telegram_token %}<span style="color:var(--grn);">Configured</span>{% else %}<span style="color:var(--acc);">Not configured</span>{% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--ink2);padding:10px 0;font-size:12px;border-bottom:1px solid var(--bdr);">Fraud threshold</td>
+        <td class="mono" style="font-size:11px;border-bottom:1px solid var(--bdr);color:var(--acc);">{{ config.threshold }}%</td>
+      </tr>
+      <tr>
+        <td style="color:var(--ink2);padding:10px 0;font-size:12px;">Drift threshold</td>
+        <td class="mono" style="font-size:11px;color:var(--amb);">{{ config.drift_threshold }}%</td>
+      </tr>
+    </table>
+    <form method="POST" style="margin-top:14px;">
+      <button type="submit" class="btn btn-primary">Send test alert</button>
+    </form>
+  </div>
+  <div class="card">
+    <div class="card-title">How to configure</div>
+    <div style="font-size:12px;color:var(--ink2);margin-bottom:10px;">Set environment variables before running, or use <a href="/set_keys" style="color:var(--blue);">Set API Keys</a> page:</div>
+    <div style="background:var(--body-bg);border:1px solid var(--bdr);border-radius:6px;padding:12px 14px;font-family:var(--mono);font-size:11px;color:var(--ink);line-height:2.2;">
+      export ALERT_EMAIL="your@gmail.com"<br>
+      export SMTP_PASS="your_app_password"<br>
+      export TELEGRAM_TOKEN="bot_token"<br>
+      export TELEGRAM_CHAT_ID="chat_id"
+    </div>
+  </div>
+</div>
+<div class="card" style="margin-top:14px;">
+  <div class="card-title">Alert triggers</div>
+  <div class="two-col" style="margin-top:12px;">
+    <div style="background:rgba(224,53,70,.06);border:1px solid rgba(224,53,70,.2);border-radius:8px;padding:14px 16px;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:5px;color:var(--acc);">🚨 Fraud spike alert</div>
+      <div style="font-size:11px;color:var(--ink2);">Fires when fraud rate exceeds <strong>{{ config.threshold }}%</strong> in last 100 predictions. Checked every 5 minutes by APScheduler.</div>
+    </div>
+    <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:14px 16px;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:5px;color:var(--amb);">⚠️ Model drift alert</div>
+      <div style="font-size:11px;color:var(--ink2);">Fires when hourly accuracy drops below <strong>{{ config.drift_threshold }}%</strong>. Checked every hour. Saved to DriftLog table.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

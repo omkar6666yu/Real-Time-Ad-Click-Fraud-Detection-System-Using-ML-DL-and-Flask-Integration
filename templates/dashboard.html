@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub">System overview — all models and fraud statistics</div>
+  </div>
+  <div class="page-hdr-actions">
+    <a href="/records" class="btn btn-outline btn-sm">
+      <svg viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+      Export
+    </a>
+    <a href="/realtime" class="btn btn-primary btn-sm">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Live Monitor
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon si-red">
+      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">Fraud Detected</div>
+      <div class="stat-val">{{ stats.fraud }}</div>
+      <div class="stat-trend trend-up">{{ stats.fraud_rate }}% fraud rate</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-grn">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">Legitimate</div>
+      <div class="stat-val">{{ stats.legit }}</div>
+      <div class="stat-trend trend-dn">Cleared clicks</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-blue">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">Total Analysed</div>
+      <div class="stat-val">{{ stats.total }}</div>
+      <div class="stat-trend" style="color:var(--ink2);">All predictions</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-amb">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">Best Accuracy</div>
+      <div class="stat-val">97.4%</div>
+      <div class="stat-trend" style="color:var(--ink2);">Stacking Classifier</div>
+    </div>
+  </div>
+</div>
+
+<div class="two-col" style="margin-bottom:16px;">
+
+  <!-- Model performance -->
+  <div class="card">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title">Model Performance Comparison</div>
+        <div class="card-sub">All 9 models — F1 Score</div>
+      </div>
+    </div>
+    {% for name, m in metrics.items() %}
+    <div class="bar-row">
+      <div class="bar-lbl">
+        {{ name[:22] }}
+        <span class="badge {% if loop.index==1 %}b-ensemble{% elif name in ['LSTM','GRU','ANN'] %}b-dl{% else %}b-ml{% endif %}" style="margin-left:4px;font-size:8px;">{% if loop.index==1 %}★{% elif name in ['LSTM','GRU','ANN'] %}DL{% else %}ML{% endif %}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill {% if loop.index==1 %}{% elif name in ['LSTM','GRU','ANN'] %}amb{% else %}blue{% endif %}" style="width:{{ m.f1 }}%"></div>
+      </div>
+      <div class="bar-pct">{{ m.f1 }}%</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- GeoIP -->
+  <div class="card">
+    <div class="card-hdr">
+      <div>
+        <div class="card-title">Fraud by Country</div>
+        <div class="card-sub">GeoIP detection — top sources</div>
+      </div>
+    </div>
+    {% if top_countries %}
+    {% set max_c = top_countries[0][1] if top_countries else 1 %}
+    {% for country, count in top_countries %}
+    <div class="bar-row">
+      <div class="bar-lbl">{{ country }}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:{{ (count/max_c*100)|round }}%"></div>
+      </div>
+      <div class="bar-pct">{{ count }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="padding:24px;text-align:center;color:var(--ink2);font-size:13px;">No data yet. Make some predictions first.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Model metrics table -->
+<div class="card">
+  <div class="card-hdr">
+    <div>
+      <div class="card-title">Detailed Model Metrics</div>
+      <div class="card-sub">Accuracy, F1, AUC, Precision, Recall for all 9 models</div>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr style="background:var(--body-bg);">
+          <th style="background:var(--body-bg);color:var(--blue);">Model</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Type</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Accuracy</th>
+          <th style="background:var(--body-bg);color:var(--blue);">F1 Score</th>
+          <th style="background:var(--body-bg);color:var(--blue);">AUC</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Precision</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Recall</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name, m in metrics.items() %}
+        <tr>
+          <td style="font-weight:500;">{{ name }}</td>
+          <td>
+            {% if loop.index == 1 %}<span class="badge b-ensemble">Ensemble</span>
+            {% elif name in ['LSTM','GRU','ANN'] %}<span class="badge b-dl">Deep Learning</span>
+            {% else %}<span class="badge b-ml">ML</span>{% endif %}
+          </td>
+          <td>
+            <div class="conf-wrap">
+              <div class="conf-bar"><div class="conf-fill" style="width:{{ m.accuracy }}%;background:{% if m.accuracy > 95 %}var(--grn){% elif m.accuracy > 90 %}var(--amb){% else %}var(--acc){% endif %};"></div></div>
+              <span style="font-size:12px;font-weight:600;color:var(--ink);">{{ m.accuracy }}%</span>
+            </div>
+          </td>
+          <td><span style="font-weight:600;">{{ m.f1 }}%</span></td>
+          <td>{{ m.auc }}</td>
+          <td>{{ m.precision }}%</td>
+          <td>{{ m.recall }}%</td>
+          <td>{% if loop.index == 1 %}<span class="badge b-success">Best Model</span>{% else %}<span class="badge b-default">Active</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Drift logs -->
+{% if drift_logs %}
+<div class="card" style="margin-top:16px;">
+  <div class="card-hdr">
+    <div class="card-title">Recent Drift Checks</div>
+    <div class="card-sub">Hourly model accuracy monitoring</div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr style="background:var(--body-bg);">
+        <th style="background:var(--body-bg);color:var(--blue);">Timestamp</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Accuracy</th>
+        <th style="background:var(--body-bg);color:var(--blue);">F1 Score</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Samples</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Status</th>
+      </tr></thead>
+      <tbody>
+        {% for d in drift_logs[:6] %}
+        <tr>
+          <td class="mono">{{ d.timestamp }}</td>
+          <td><span style="font-weight:600;">{{ d.accuracy }}%</span></td>
+          <td>{{ d.f1_score }}%</td>
+          <td>{{ d.total }}</td>
+          <td><span class="badge {% if d.accuracy >= 90 %}b-success{% elif d.accuracy >= 85 %}b-warning{% else %}b-danger{% endif %}">{{ d.status() }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

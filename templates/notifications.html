@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div><div class="page-title">Notifications</div><div class="page-sub">Recent fraud alerts, drift warnings and system events</div></div>
+</div>
+<div class="two-col">
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Recent fraud detections</div>
+      <span class="badge b-fraud">{{ predictions|length }}</span>
+    </div>
+    {% if predictions %}
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="background:var(--body-bg);color:var(--blue);">Time</th>
+          <th style="background:var(--body-bg);color:var(--blue);">IP</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Country</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Velocity</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Confidence</th>
+        </tr></thead>
+        <tbody>{% for p in predictions %}<tr>
+          <td class="mono" style="font-size:11px;color:var(--ink2);">{{ p.timestamp[11:16] }}</td>
+          <td class="mono">{{ p.ip }}</td>
+          <td style="font-size:11px;">{{ p.country }}</td>
+          <td><span class="badge b-{{ p.velocity|lower }}">{{ p.velocity }}</span></td>
+          <td class="mono" style="color:var(--acc);font-weight:600;">{{ (p.confidence or 0)|round(1) }}%</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--ink2);">No fraud detections yet</div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Model drift events</div>
+      <span class="badge b-warning">{{ drift_logs|length }}</span>
+    </div>
+    {% if drift_logs %}
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="background:var(--body-bg);color:var(--blue);">Time</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Accuracy</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Status</th>
+        </tr></thead>
+        <tbody>{% for d in drift_logs %}<tr>
+          <td class="mono" style="font-size:11px;color:var(--ink2);">{{ d.timestamp[11:16] }}</td>
+          <td class="mono" style="color:{% if d.accuracy>=90 %}var(--grn){% elif d.accuracy>=85 %}var(--amb){% else %}var(--acc){% endif %};font-weight:600;">{{ d.accuracy }}%</td>
+          <td><span class="badge b-{{ d.status()|lower }}">{{ d.status() }}</span></td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--ink2);">No drift events yet</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

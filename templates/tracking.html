@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div><div class="page-title">Website Tracking</div><div class="page-sub">Link your websites, generate tracking scripts, monitor live fraud signals per site</div></div>
+  <div class="page-hdr-actions">
+    <button class="btn btn-primary" onclick="document.getElementById('add-modal').style.display='flex'">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Link website
+    </button>
+  </div>
+</div>
+
+<!-- ── STAT CARDS ── -->
+<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon si-blue"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Total clicks tracked</div><div class="stat-val">{{ total }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-red"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Fraudulent</div><div class="stat-val" style="color:var(--acc);">{{ fraud }}</div><div class="stat-trend trend-up">{{ fraud_rate }}% rate</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-grn"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Legitimate</div><div class="stat-val" style="color:var(--grn);">{{ legit }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-pur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Linked websites</div><div class="stat-val">{{ sites|length }}</div></div>
+  </div>
+</div>
+
+<!-- ── LINKED WEBSITES ── -->
+{% if sites %}
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-hdr">
+    <div class="card-title">Linked websites</div>
+    <span class="badge b-info">{{ sites|length }} sites</span>
+  </div>
+  {% for site in sites %}
+  <div style="border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:10px;background:{% if site.active %}#fff{% else %}var(--body-bg){% endif %};">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+          <div style="font-size:14px;font-weight:600;color:var(--ink);">{{ site.name }}</div>
+
+          <!-- CHANGE 1: Connection status indicator (replaces plain ACTIVE/PAUSED badge) -->
+          {% if not site.active %}
+            <span class="badge b-default">⏸ PAUSED</span>
+          {% elif site_stats[site.id].connected %}
+            <span class="badge b-legit" id="conn-{{ site.id }}">● CONNECTED</span>
+          {% elif site_stats[site.id].verified %}
+            <span class="badge b-warning" id="conn-{{ site.id }}">◌ IDLE</span>
+          {% else %}
+            <span class="badge b-default" id="conn-{{ site.id }}">○ NOT INSTALLED</span>
+          {% endif %}
+
+          <!-- CHANGE 1: Verified badge — shows once script has pinged at least once -->
+          {% if site_stats[site.id].verified %}
+            <span class="badge b-info" title="Script has been installed and pinged at least once">✓ Verified</span>
+          {% else %}
+            <span class="badge b-default" title="Install the tracking script to verify">! Pending</span>
+          {% endif %}
+        </div>
+
+        <div style="font-size:11px;color:var(--ink2);margin-bottom:6px;">{{ site.url }}</div>
+        <div style="display:flex;gap:12px;font-size:11px;color:var(--ink2);flex-wrap:wrap;">
+          <span>Model: <strong style="color:var(--ink);">{{ site.model }}</strong></span>
+          <span>Clicks: <strong style="color:var(--blue);">{{ site_stats[site.id].total }}</strong></span>
+          <span>Fraud: <strong style="color:var(--acc);">{{ site_stats[site.id].fraud }}</strong></span>
+          <span>Since: {{ site.created[:10] }}</span>
+          <!-- CHANGE 1: last ping timestamp -->
+          <span>Last ping: <strong style="color:var(--ink);" id="ping-{{ site.id }}">{{ site_stats[site.id].last_ping }}</strong></span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <!-- Model selector -->
+        <form method="POST" style="display:inline;">
+          <input type="hidden" name="action" value="update_model">
+          <input type="hidden" name="site_id" value="{{ site.id }}">
+          <select name="model" onchange="this.form.submit()" style="font-size:11px;border:1px solid var(--bdr2);border-radius:6px;padding:5px 8px;background:#fff;color:var(--ink);outline:none;cursor:pointer;">
+            {% for m in ['Stacking Classifier','LightGBM','XGBoost','Random Forest','LSTM','GRU','ANN','SVM','Logistic Regression'] %}
+            <option {% if site.model==m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        <!-- View script -->
+        <button class="btn btn-outline btn-sm" onclick="showScript('{{ site.api_key }}','{{ site.name }}','{{ site.url }}','{{ server_url }}')">&lt;/&gt; Script</button>
+        <!-- Toggle active -->
+        <form method="POST" style="display:inline;">
+          <input type="hidden" name="action" value="toggle_site">
+          <input type="hidden" name="site_id" value="{{ site.id }}">
+          <button type="submit" class="btn btn-sm {% if site.active %}btn-ghost{% else %}btn-success{% endif %}">
+            {% if site.active %}⏸ Pause{% else %}▶ Resume{% endif %}
+          </button>
+        </form>
+        <!-- Remove -->
+        <form method="POST" style="display:inline;" onsubmit="return confirm('Remove this website and delete its tracking script?')">
+          <input type="hidden" name="action" value="remove_site">
+          <input type="hidden" name="site_id" value="{{ site.id }}">
+          <button type="submit" class="btn btn-danger btn-sm">✕ Remove</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="margin-bottom:16px;text-align:center;padding:40px;">
+  <div style="font-size:32px;margin-bottom:10px;">🌐</div>
+  <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px;">No websites linked yet</div>
+  <div style="font-size:12px;color:var(--ink2);margin-bottom:16px;">Link your first website to generate a tracking script and start monitoring fraud in real time.</div>
+  <button class="btn btn-primary" onclick="document.getElementById('add-modal').style.display='flex'">Link your first website</button>
+</div>
+{% endif %}
+
+<!-- ── LIVE LOGS TABLE ── -->
+<!-- CHANGE 2: subtitle clarifies logs are from linked sites only, not entire system -->
+<div class="card">
+  <div class="card-hdr">
+    <div>
+      <div class="card-title">Live click log</div>
+      <div class="card-sub">
+        {% if sites %}
+          Showing clicks from {{ sites|length }} linked site{% if sites|length > 1 %}s{% endif %} only
+          — {{ recent|length }} recent entries
+        {% else %}
+          No linked websites — link a site and install the script to see clicks here
+        {% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <a href="/records" class="btn btn-outline btn-sm">Full records</a>
+      <a href="/download_csv" class="btn btn-outline btn-sm">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </a>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr style="background:var(--body-bg);">
+          <th style="background:var(--body-bg);color:var(--blue);">Time</th>
+          <th style="background:var(--body-bg);color:var(--blue);">IP Address</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Device</th>
+          <th style="background:var(--body-bg);color:var(--blue);">OS</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Page / Channel</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Country</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Signals</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Velocity</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Result</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Confidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent %}
+        <tr>
+          <td class="mono" style="font-size:11px;color:var(--ink2);white-space:nowrap;">{{ p.timestamp[11:16] }}</td>
+          <td class="mono" style="font-size:11px;font-weight:500;">{{ p.ip }}</td>
+          <td style="font-size:11px;">{{ p.device }}</td>
+          <td style="font-size:11px;color:var(--ink2);">{{ p.os }}</td>
+          <td style="font-size:11px;color:var(--ink2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ p.channel or '/' }}</td>
+          <td style="font-size:11px;">{{ p.country or '—' }}</td>
+          <td>
+            <span style="font-family:monospace;font-size:12px;font-weight:700;color:{% if p.signals and p.signals > 3 %}var(--acc){% elif p.signals and p.signals > 0 %}var(--amb){% else %}var(--ink2){% endif %};">
+              {{ p.signals or 0 }}
+            </span>
+          </td>
+          <td><span class="badge {% if p.velocity=='HIGH' %}b-danger{% elif p.velocity=='MEDIUM' %}b-warning{% else %}b-default{% endif %}">{{ p.velocity or 'LOW' }}</span></td>
+          <td><span class="badge {% if p.result=='Fraudulent' %}b-fraud{% else %}b-legit{% endif %}">{{ p.result }}</span></td>
+          <td>
+            <div class="conf-wrap">
+              <div class="conf-bar"><div class="conf-fill" style="width:{{ (p.confidence or 0) }}%;background:{% if p.result=='Fraudulent' %}var(--acc){% else %}var(--grn){% endif %};"></div></div>
+              <span style="font-size:11px;font-weight:600;">{{ (p.confidence or 0)|round(1) }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--ink2);">
+          {% if sites %}
+            No clicks from your linked websites yet. Make sure the tracking script is installed correctly.
+          {% else %}
+            No websites linked. Click "Link website" above to get started.
+          {% endif %}
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── ADD WEBSITE MODAL ── -->
+<div id="add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:16px;font-weight:700;color:var(--ink);">Link a website</div>
+      <button onclick="document.getElementById('add-modal').style.display='none'" style="background:none;border:none;font-size:20px;color:var(--ink2);cursor:pointer;">✕</button>
+    </div>
+    <form method="POST">
+      <input type="hidden" name="action" value="add_website">
+      <div class="field" style="margin-bottom:12px;">
+        <label>Website name</label>
+        <input name="site_name" required placeholder="e.g. My Online Store" autocomplete="off">
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Website URL</label>
+        <input name="site_url" required placeholder="https://yourwebsite.com" type="url">
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Fraud detection model</label>
+        <select name="site_model">
+          <option>Stacking Classifier</option>
+          <option>LightGBM</option>
+          <option>XGBoost</option>
+          <option>Random Forest</option>
+          <option>LSTM</option>
+          <option>GRU</option>
+          <option>ANN</option>
+          <option>SVM</option>
+          <option>Logistic Regression</option>
+        </select>
+      </div>
+      <!-- CHANGE 2: instruction note in modal -->
+      <div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:7px;padding:10px 14px;font-size:11px;color:var(--blue);margin-bottom:16px;">
+        ℹ After linking, click <strong>&lt;/&gt; Script</strong> to get the tracking code. Paste it into your website's HTML. The status will change to <strong>CONNECTED</strong> once the script sends its first ping.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn btn-primary" style="flex:1;">Link website &amp; generate script</button>
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('add-modal').style.display='none'">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── SCRIPT MODAL ── -->
+<div id="script-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px;width:640px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--ink);" id="script-site-name">Tracking script</div>
+        <div style="font-size:11px;color:var(--ink2);" id="script-site-url"></div>
+      </div>
+      <button onclick="document.getElementById('script-modal').style.display='none'" style="background:none;border:none;font-size:20px;color:var(--ink2);cursor:pointer;">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--ink2);margin-bottom:10px;">Paste this script into your website's <code style="background:var(--body-bg);padding:1px 5px;border-radius:3px;">&lt;head&gt;</code> or before <code style="background:var(--body-bg);padding:1px 5px;border-radius:3px;">&lt;/body&gt;</code>:</div>
+    <div style="background:#0d1117;border-radius:8px;padding:16px;position:relative;margin-bottom:14px;">
+      <pre id="script-code" style="color:#e2e8f0;font-family:monospace;font-size:11px;line-height:1.7;margin:0;white-space:pre-wrap;word-break:break-all;"></pre>
+      <button onclick="copyScript()" style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#e2e8f0;padding:4px 10px;border-radius:5px;font-size:10px;cursor:pointer;" id="copy-btn">Copy</button>
+    </div>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:7px;padding:10px 14px;font-size:11px;color:var(--amb);">
+      ⚠ Keep your API key private. This script sends click data to your AdFraud Shield instance at <strong>{{ server_url }}</strong>. Change the endpoint URL if deploying to production.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function showScript(apiKey, siteName, siteUrl, serverUrl) {
+  document.getElementById('script-site-name').textContent = siteName + ' — Tracking Script';
+  document.getElementById('script-site-url').textContent = siteUrl;
+  const script = `<!-- AdFraud Shield Tracking Script — ${siteName} -->
+<script>
+(function() {
+  var _afs = {
+    endpoint: '${serverUrl}/api/track',
+    api_key:  '${apiKey}'
+  };
+  function _getDevice() {
+    var ua = navigator.userAgent;
+    if (/tablet|ipad/i.test(ua)) return 'Tablet';
+    if (/mobile|android|iphone/i.test(ua)) return 'Mobile';
+    return 'Desktop';
+  }
+  function _getOS() {
+    var ua = navigator.userAgent;
+    if (/android/i.test(ua)) return 'Android';
+    if (/iphone|ipad/i.test(ua)) return 'iOS';
+    if (/windows/i.test(ua)) return 'Windows';
+    if (/mac/i.test(ua)) return 'macOS';
+    return 'Linux';
+  }
+  function _track() {
+    fetch(_afs.endpoint, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        api_key:    _afs.api_key,
+        device:     _getDevice(),
+        os:         _getOS(),
+        hour:       new Date().getHours(),
+        page:       window.location.pathname,
+        user_agent: navigator.userAgent
+      })
+    }).catch(function(){});
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _track);
+  } else {
+    _track();
+  }
+  document.addEventListener('click', function(e) {
+    var t = e.target.closest('a,button,input[type=submit]');
+    if (t) setTimeout(_track, 50);
+  }, true);
+})();
+<\/script>`;
+  document.getElementById('script-code').textContent = script;
+  document.getElementById('script-modal').style.display = 'flex';
+}
+
+function copyScript() {
+  const code = document.getElementById('script-code').textContent;
+  navigator.clipboard.writeText(code).then(function() {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.style.background = 'rgba(34,197,94,.2)';
+    btn.style.color = '#22c55e';
+    setTimeout(function(){ btn.textContent = 'Copy'; btn.style.background = 'rgba(255,255,255,.1)'; btn.style.color = '#e2e8f0'; }, 2000);
+  });
+}
+
+// Close modals on backdrop click
+['add-modal','script-modal'].forEach(function(id) {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+  });
+});
+
+// CHANGE 3: Poll /api/site_status every 10s to update connection indicators in real time
+{% if sites %}
+var siteIds = [{% for site in sites %}{{ site.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+function pollSiteStatus() {
+  siteIds.forEach(function(id) {
+    fetch('/api/site_status/' + id)
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        var connEl = document.getElementById('conn-' + id);
+        var pingEl = document.getElementById('ping-' + id);
+        if (connEl) {
+          if (d.connected) {
+            connEl.className = 'badge b-legit';
+            connEl.textContent = '● CONNECTED';
+          } else if (d.verified) {
+            connEl.className = 'badge b-warning';
+            connEl.textContent = '◌ IDLE';
+          } else {
+            connEl.className = 'badge b-default';
+            connEl.textContent = '○ NOT INSTALLED';
+          }
+        }
+        if (pingEl && d.last_ping && d.last_ping !== 'Never') {
+          pingEl.textContent = d.last_ping;
+        }
+      })
+      .catch(function(){});
+  });
+}
+// Poll every 10 seconds
+setInterval(pollSiteStatus, 10000);
+{% endif %}
+</script>
+{% endblock %}

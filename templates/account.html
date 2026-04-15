@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div><div class="page-title">My Account</div><div class="page-sub">Profile, preferences and security settings</div></div>
+</div>
+<div class="two-col">
+  <div class="card">
+    <div class="card-title">Profile</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:{% if current_user.role=='admin' %}rgba(245,158,11,.15){% else %}rgba(59,130,246,.15){% endif %};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:{% if current_user.role=='admin' %}var(--amb){% else %}var(--blue){% endif %};">{{ current_user.username[0]|upper }}</div>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink);">{{ current_user.username }}</div>
+        <div style="font-size:12px;color:{% if current_user.role=='admin' %}var(--amb){% else %}var(--ink2){% endif %}">{{ current_user.role|title }}</div>
+      </div>
+    </div>
+    <form method="POST">
+      <input type="hidden" name="action" value="profile">
+      <div class="field"><label>Email</label><input name="email" value="{{ current_user.email or '' }}" placeholder="your@email.com"></div>
+      <button type="submit" class="btn btn-blue" style="margin-top:12px;">Save profile</button>
+    </form>
+  </div>
+  <div class="card">
+    <div class="card-title">Change Password</div>
+    <form method="POST">
+      <input type="hidden" name="action" value="password">
+      <div class="field"><label>New password</label><input name="new_password" type="password" placeholder="Min 6 characters"></div>
+      <div class="field" style="margin-top:10px;"><label>Confirm password</label><input type="password" placeholder="Repeat new password"></div>
+      <button type="submit" class="btn btn-outline" style="margin-top:12px;">Update password</button>
+    </form>
+  </div>
+</div>
+<div class="card" style="margin-top:14px;">
+  <div class="card-title">Preferences</div>
+  <div style="display:flex;flex-direction:column;gap:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bdr);">
+      <div><div style="font-size:13px;font-weight:500;color:var(--ink);">Email notifications</div><div style="font-size:11px;color:var(--ink2);margin-top:2px;">Receive weekly fraud summary</div></div>
+      <div class="pref-toggle on" id="tog1" onclick="togglePref(this)"><div class="pref-thumb"></div></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bdr);">
+      <div><div style="font-size:13px;font-weight:500;color:var(--ink);">Show SHAP on predict</div><div style="font-size:11px;color:var(--ink2);margin-top:2px;">Feature explanation after each result</div></div>
+      <div class="pref-toggle on" id="tog2" onclick="togglePref(this)"><div class="pref-thumb"></div></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;">
+      <div><div style="font-size:13px;font-weight:500;color:var(--ink);">Default model</div></div>
+      <div class="field" style="width:200px;margin:0;"><select><option>Stacking Classifier</option><option>LightGBM</option><option>XGBoost</option></select></div>
+    </div>
+  </div>
+</div>
+<style>
+.pref-toggle{width:40px;height:22px;border-radius:11px;background:var(--bdr2);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
+.pref-toggle.on{background:var(--blue);}
+.pref-thumb{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.pref-toggle.on .pref-thumb{left:20px;}
+</style>
+{% endblock %}
+{% block scripts %}
+<script>function togglePref(el){el.classList.toggle('on');}</script>
+{% endblock %}

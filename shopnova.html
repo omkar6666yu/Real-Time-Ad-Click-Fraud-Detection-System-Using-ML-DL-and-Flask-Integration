@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ShopNova — Live Fraud Detection Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#f5f2ec;--bg2:#ede9e0;--ink:#1a1612;--ink2:#5c5448;--acc:#e8401c;--acc2:#ff6b47;--gold:#c8960c;--card:#fff;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;--disp:'Syne',sans-serif;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.6;}
+
+/* LAYOUT: full-width website only (fraud panel moved to Flask /realtime) */
+.layout{display:block;min-height:100vh;max-width:1280px;margin:0 auto;}
+
+/* ── AD BANNER SECTION ───────────────────────────────────────────────────── */
+.ad-section{background:#fff;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:16px 0;}
+.ad-grid{display:flex;gap:16px;overflow-x:auto;padding:0 48px;}
+.ad-card{min-width:220px;border-radius:10px;overflow:hidden;position:relative;cursor:pointer;border:1px solid #e5e7eb;flex-shrink:0;}
+.ad-card img{width:100%;height:100px;object-fit:cover;display:block;}
+.ad-card-body{padding:8px 10px;background:#fff;}
+.ad-label{position:absolute;top:6px;left:6px;font-size:8px;font-weight:700;background:#6b7280;color:#fff;padding:2px 5px;border-radius:3px;letter-spacing:.04em;}
+.ad-card-title{font-size:12px;font-weight:600;color:#1a1612;}
+.ad-card-sub{font-size:10px;color:#6b7280;margin-top:1px;}
+.ad-badge{display:inline-block;font-size:9px;background:#fee2e2;color:#b91c1c;border-radius:3px;padding:1px 5px;margin-top:3px;font-weight:700;}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.ph-sub{font-size:9px;color:#374151;margin-top:2px;}
+.ph-api{margin-top:7px;display:flex;gap:4px;align-items:center;}
+.ph-api input{flex:1;background:#1e2736;border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:4px 7px;color:#e2e8f0;font-family:var(--mono);font-size:9px;outline:none;}
+.conn-badge{font-size:8px;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:700;}
+.conn-on{background:rgba(34,197,94,.15);color:#4ade80;border:.5px solid rgba(34,197,94,.3);}
+.conn-off{background:rgba(239,68,68,.12);color:#f87171;border:.5px solid rgba(239,68,68,.3);}
+.pstats{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.5px;background:rgba(255,255,255,.04);}
+.ps{background:#0d1117;padding:7px 5px;text-align:center;}
+.psv{font-family:var(--mono);font-size:15px;font-weight:700;color:#f1f5f9;}
+.psl{font-size:7px;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+.ps-f .psv{color:#ef4444;}.ps-l .psv{color:#22c55e;}.ps-s .psv{color:#f59e0b;}
+.pfeed{flex:1;overflow-y:auto;padding:3px 0;min-height:0;}
+.pfeed::-webkit-scrollbar{width:2px;}
+.pfeed::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);}
+.fi{padding:6px 10px;border-bottom:.5px solid rgba(255,255,255,.04);animation:fin .2s ease;}
+@keyframes fin{from{opacity:0;transform:translateX(5px)}to{opacity:1;transform:translateX(0)}}
+.fi-r{display:flex;align-items:center;gap:4px;margin-bottom:2px;}
+.fi-ip{font-family:var(--mono);font-size:9px;color:#e2e8f0;}
+.fi-v{font-size:7px;font-family:var(--mono);padding:1px 4px;border-radius:2px;font-weight:700;}
+.vf{background:rgba(239,68,68,.15);color:#f87171;border:.5px solid rgba(239,68,68,.3);}
+.vl{background:rgba(34,197,94,.1);color:#4ade80;border:.5px solid rgba(34,197,94,.25);}
+.fi-id{font-size:7px;color:#374151;font-family:var(--mono);}
+.fi-sigs{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:2px;}
+.sb{font-size:7px;font-family:var(--mono);padding:1px 4px;border-radius:2px;}
+.sv{background:rgba(239,68,68,.1);color:#fca5a5;border:.5px solid rgba(239,68,68,.18);}
+.sd{background:rgba(245,158,11,.08);color:#fbbf24;border:.5px solid rgba(245,158,11,.18);}
+.sg{background:rgba(59,130,246,.1);color:#93c5fd;border:.5px solid rgba(59,130,246,.18);}
+.st{background:rgba(34,197,94,.07);color:#86efac;border:.5px solid rgba(34,197,94,.18);}
+.sn{background:rgba(139,92,246,.1);color:#c4b5fd;border:.5px solid rgba(139,92,246,.18);}
+.fi-why{font-size:7px;color:#374151;font-family:var(--mono);}
+.ptrig{border-top:1px solid rgba(255,255,255,.06);padding:8px 10px;overflow-y:auto;max-height:50vh;}
+.ptrig::-webkit-scrollbar{width:2px;}
+.ptrig::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);}
+.pt-t{font-size:8px;font-family:var(--mono);color:#374151;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.tg{display:grid;grid-template-columns:1fr 1fr;gap:3px;}
+.tb{font-size:8px;font-family:var(--mono);padding:5px 6px;border-radius:3px;border:none;cursor:pointer;text-align:left;line-height:1.3;font-weight:700;transition:opacity .12s;}
+.tb:hover{opacity:.76;}.tb:active{transform:scale(.97);}
+.tv{background:rgba(239,68,68,.1);color:#fca5a5;border:.5px solid rgba(239,68,68,.22);}
+.td{background:rgba(245,158,11,.08);color:#fbbf24;border:.5px solid rgba(245,158,11,.18);}
+.tg2{background:rgba(59,130,246,.1);color:#93c5fd;border:.5px solid rgba(59,130,246,.22);}
+.tt{background:rgba(34,197,94,.07);color:#86efac;border:.5px solid rgba(34,197,94,.18);}
+.tn{background:rgba(139,92,246,.1);color:#c4b5fd;border:.5px solid rgba(139,92,246,.22);}
+.tleg{background:rgba(34,197,94,.1);color:#4ade80;border:.5px solid rgba(34,197,94,.28);}
+.tclr{background:rgba(255,255,255,.04);color:#374151;border:.5px solid rgba(255,255,255,.08);font-family:var(--mono);}
+.monitor-link{display:block;text-align:center;padding:6px;background:rgba(59,130,246,.1);border-top:1px solid rgba(59,130,246,.2);color:#93c5fd;font-size:9px;font-family:var(--mono);text-decoration:none;cursor:pointer;}
+.monitor-link:hover{background:rgba(59,130,246,.18);}
+
+/* ── BOT BALL ─────────────────────────────────────────────────────────────── */
+#bot-ball{width:56px;height:56px;border-radius:50%;background:#ef4444;border:3px solid #fff;cursor:grab;position:fixed;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;top:110px;left:16px;box-shadow:0 4px 18px rgba(239,68,68,.45);transition:box-shadow .2s;}
+#bot-ball:hover{box-shadow:0 6px 26px rgba(239,68,68,.6);}
+#bot-ball.dragging{cursor:grabbing;transform:scale(1.1);}
+#bot-ball.firing{animation:bpulse .6s infinite;}
+@keyframes bpulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.7)}50%{box-shadow:0 0 0 18px rgba(239,68,68,0)}}
+.bi{font-size:20px;line-height:1;}.bl{font-size:7px;font-family:var(--mono);font-weight:700;color:#fff;letter-spacing:.04em;}.bs{font-size:7px;font-family:var(--mono);color:rgba(255,255,255,.7);margin-top:1px;}
+.drop-ready{outline:2.5px dashed #ef4444!important;outline-offset:3px;background:rgba(239,68,68,.06)!important;}
+.ripple{position:fixed;border-radius:50%;pointer-events:none;z-index:9998;animation:rout .55s ease-out forwards;}
+.r-fraud{background:rgba(239,68,68,.3);border:2px solid #ef4444;}
+.r-legit{background:rgba(34,197,94,.25);border:2px solid #22c55e;}
+@keyframes rout{from{width:0;height:0;opacity:1;transform:translate(-50%,-50%)}to{width:56px;height:56px;opacity:0;transform:translate(-50%,-50%)}}
+
+/* ── WEBSITE ─────────────────────────────────────────────────────────────── */
+.site{overflow-y:auto;}
+.adstrip{background:var(--gold);padding:8px 20px;display:flex;align-items:center;justify-content:center;gap:14px;cursor:pointer;}
+.adstrip:hover{filter:brightness(.96);}
+.ast{font-size:11px;font-weight:500;color:var(--ink);}
+.ascta{background:var(--ink);color:#fff;padding:3px 11px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--mono);}
+.nav{background:var(--card);border-bottom:1px solid var(--bg2);padding:0 20px;display:flex;align-items:center;height:52px;position:sticky;top:0;z-index:100;}
+.logo{font-family:var(--disp);font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-.03em;margin-right:24px;}
+.logo span{color:var(--acc);}
+.navls{display:flex;gap:2px;}
+.nl{font-size:11px;color:var(--ink2);padding:5px 11px;border-radius:5px;cursor:pointer;transition:background .13s;}
+.nl:hover{background:var(--bg2);}
+.navr{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.searchbar{background:var(--bg);border:1px solid var(--bg2);border-radius:7px;padding:6px 12px;font-size:11px;color:var(--ink);outline:none;width:150px;}
+.cart-btn{background:var(--acc);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;transition:background .15s;}
+.cart-btn:hover{background:var(--acc2);}
+.hero{background:var(--ink);color:#f5f2ec;padding:40px 20px;display:grid;grid-template-columns:1fr 180px;gap:28px;align-items:center;}
+.htag{font-size:9px;font-family:var(--mono);color:var(--acc2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+.htitle{font-family:var(--disp);font-size:36px;font-weight:800;line-height:1.04;letter-spacing:-.02em;margin-bottom:12px;}
+.htitle span{color:var(--acc2);}
+.hsub{font-size:13px;color:#9ca3af;margin-bottom:20px;line-height:1.7;}
+.hbtns{display:flex;gap:8px;}
+.hbp{background:var(--acc);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;transition:background .15s;}
+.hbp:hover{background:var(--acc2);}
+.hbs{background:transparent;color:#f5f2ec;border:1px solid rgba(255,255,255,.22);padding:10px 18px;border-radius:8px;font-size:12px;cursor:pointer;}
+.hbox{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:24px;text-align:center;}
+.he{font-size:56px;margin-bottom:10px;display:block;}
+.hbdg{background:var(--acc);color:#fff;display:inline-block;padding:4px 12px;border-radius:16px;font-size:10px;font-family:var(--mono);}
+.section{padding:32px 20px;}
+.sect{font-family:var(--disp);font-size:22px;font-weight:700;color:var(--ink);margin-bottom:16px;}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.pc{background:var(--card);border:1px solid var(--bg2);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .18s;position:relative;}
+.pc:hover{transform:translateY(-2px);}
+.pimg{background:var(--bg);height:120px;display:flex;align-items:center;justify-content:center;font-size:44px;border-bottom:1px solid var(--bg2);}
+.pb{padding:11px;}
+.pn{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px;}
+.pd{font-size:10px;color:var(--ink2);margin-bottom:7px;}
+.pp{font-family:var(--disp);font-size:18px;font-weight:700;color:var(--acc);}
+.po{font-size:10px;color:#9ca3af;text-decoration:line-through;margin-left:4px;}
+.pbdg{position:absolute;top:8px;left:8px;background:var(--acc);color:#fff;font-size:8px;font-family:var(--mono);padding:2px 6px;border-radius:3px;font-weight:700;}
+.add-btn{width:100%;margin-top:7px;background:var(--ink);color:#fff;border:none;padding:7px;border-radius:6px;font-size:11px;cursor:pointer;transition:background .15s;}
+.add-btn:hover{background:#374151;}
+.adgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px 32px;}
+.ab{border-radius:10px;padding:22px;cursor:pointer;position:relative;overflow:hidden;transition:opacity .14s;}
+.ab:hover{opacity:.92;}
+.ab1{background:var(--ink);color:#f5f2ec;}
+.ab2{background:#1e3a5f;color:#e8f4ff;}
+.abl{font-size:8px;font-family:var(--mono);letter-spacing:.1em;opacity:.4;margin-bottom:5px;}
+.abt{font-family:var(--disp);font-size:20px;font-weight:700;margin-bottom:4px;}
+.abs{font-size:11px;opacity:.65;margin-bottom:12px;}
+.abc{display:inline-block;background:var(--acc);color:#fff;padding:6px 16px;border-radius:7px;font-size:11px;font-weight:500;}
+.abd{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:52px;opacity:.13;}
+.fads{background:var(--bg2);padding:16px 20px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.fa{background:var(--card);border:1px solid var(--bg2);border-radius:9px;padding:12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;}
+.fa:hover{border-color:var(--acc);transform:translateY(-1px);}
+.fai{font-size:20px;}.fat{font-size:12px;font-weight:600;color:var(--ink);}.fas{font-size:10px;color:var(--ink2);}
+</style>
+</head>
+<body>
+
+<div id="bot-ball">
+  <div class="bi">&#129302;</div>
+  <div class="bl">BOT</div>
+  <div class="bs" id="bst">drag me</div>
+</div>
+
+<div class="layout">
+
+<!-- ── SHOPNOVA WEBSITE ──────────────────────────────────────────────────── -->
+<div class="site" id="sw">
+
+  <div class="adstrip" id="el-strip">
+    <span class="ast">&#9733; Flash Sale — Up to 70% off Electronics today only!</span>
+    <span class="ascta">SHOP NOW</span>
+    <span class="ast">Free shipping on $49+</span>
+  </div>
+
+  <nav class="nav">
+    <div class="logo">Shop<span>Nova</span></div>
+    <div class="navls">
+      <span class="nl" id="el-elec">Electronics</span>
+      <span class="nl" id="el-fash">Fashion</span>
+      <span class="nl" id="el-home">Home</span>
+      <span class="nl" id="el-deals">Deals</span>
+      <span class="nl" id="el-sale">Sale</span>
+    </div>
+    <div class="navr">
+      <input class="searchbar" placeholder="Search products...">
+      <button class="cart-btn" id="el-cart">&#128722; Cart (0)</button>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <div class="htag">Best deals of 2025</div>
+      <div class="htitle">Tech that <span>moves</span><br>at the speed of you</div>
+      <div class="hsub">The latest gadgets, fashion and essentials — delivered in 24 hours.</div>
+      <div class="hbtns">
+        <button class="hbp" id="el-hshop">Shop the sale</button>
+        <button class="hbs" id="el-hbro">Browse all</button>
+      </div>
+    </div>
+    <div class="hbox" style="background:none;border:none;padding:0;overflow:hidden;border-radius:12px;"><img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=320&h=200&fit=crop" alt="phone" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
+  </div>
+
+  <!-- ── SPONSORED AD BANNER ───────────────────────────────────────────────── -->
+  <div style="padding:0 20px 12px;">
+    <div style="background:linear-gradient(135deg,#1a1612 60%,#2d1a0e);border-radius:12px;padding:18px 24px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px;position:relative;overflow:hidden;">
+      <div style="position:absolute;right:120px;top:0;bottom:0;width:1px;background:rgba(232,64,28,.2);"></div>
+      <div>
+        <div style="font-size:8px;font-family:var(--mono);color:var(--acc2);text-transform:uppercase;letter-spacing:.15em;margin-bottom:4px;">AD · Sponsored</div>
+        <div style="font-family:var(--disp);font-size:20px;font-weight:800;color:#f5f2ec;margin-bottom:4px;">Apple AirPods Pro 2</div>
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:10px;">Adaptive Transparency · H2 chip · USB-C</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button id="el-ad-apple" style="background:var(--acc);color:#fff;border:none;padding:7px 18px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;">Shop now</button>
+          <span style="font-size:13px;font-family:var(--mono);color:#f5f2ec;font-weight:700;">$199</span>
+          <span style="font-size:11px;color:#6b7280;text-decoration:line-through;">$249</span>
+        </div>
+      </div>
+      <img src="https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=180&h=120&fit=crop" alt="AirPods" style="width:120px;height:90px;object-fit:contain;border-radius:8px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.4));">
+    </div>
+  </div>
+
+  <!-- ── INLINE AD ROW (like real e-commerce sites) ───────────────────────── -->
+  <div style="padding:0 20px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+    <div id="el-ad-sam" style="background:#1e3a5f;border-radius:10px;padding:14px;cursor:pointer;position:relative;overflow:hidden;transition:opacity .15s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+      <div style="font-size:8px;font-family:var(--mono);color:#93c5fd;letter-spacing:.1em;margin-bottom:4px;">AD</div>
+      <div style="font-size:13px;font-weight:700;color:#e8f4ff;margin-bottom:2px;">Samsung Galaxy S25</div>
+      <div style="font-size:10px;color:#7dd3fc;margin-bottom:8px;">AI-powered camera system</div>
+      <div style="font-size:14px;font-weight:700;color:#fff;font-family:var(--mono);">From $799</div>
+      <img src="https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=100&h=60&fit=crop" alt="Samsung" style="position:absolute;right:8px;bottom:8px;width:64px;height:48px;object-fit:contain;opacity:.85;">
+    </div>
+    <div id="el-ad-sony" style="background:#1a1a2e;border-radius:10px;padding:14px;cursor:pointer;position:relative;overflow:hidden;transition:opacity .15s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+      <div style="font-size:8px;font-family:var(--mono);color:#a78bfa;letter-spacing:.1em;margin-bottom:4px;">FEATURED</div>
+      <div style="font-size:13px;font-weight:700;color:#ede9fe;margin-bottom:2px;">Sony WH-1000XM5</div>
+      <div style="font-size:10px;color:#c4b5fd;margin-bottom:8px;">Best-in-class noise cancelling</div>
+      <div style="font-size:14px;font-weight:700;color:#fff;font-family:var(--mono);">$279 <span style="font-size:10px;text-decoration:line-through;opacity:.5;">$399</span></div>
+      <img src="https://images.unsplash.com/photo-1546435770-a3e736dc9738?w=100&h=60&fit=crop" alt="Sony" style="position:absolute;right:8px;bottom:8px;width:64px;height:48px;object-fit:contain;opacity:.85;">
+    </div>
+    <div id="el-ad-dell" style="background:#0f2417;border-radius:10px;padding:14px;cursor:pointer;position:relative;overflow:hidden;transition:opacity .15s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+      <div style="font-size:8px;font-family:var(--mono);color:#6ee7b7;letter-spacing:.1em;margin-bottom:4px;">DEAL</div>
+      <div style="font-size:13px;font-weight:700;color:#ecfdf5;margin-bottom:2px;">Dell XPS 15</div>
+      <div style="font-size:10px;color:#a7f3d0;margin-bottom:8px;">OLED · i9 · 32GB RAM</div>
+      <div style="font-size:14px;font-weight:700;color:#fff;font-family:var(--mono);">$1,299 <span style="font-size:10px;text-decoration:line-through;opacity:.5;">$1,799</span></div>
+      <img src="https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=100&h=60&fit=crop" alt="Dell" style="position:absolute;right:8px;bottom:8px;width:64px;height:48px;object-fit:contain;opacity:.85;">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sect">Trending right now</div>
+    <div class="pgrid" id="pgrid"></div>
+  </div>
+
+  <div class="adgrid">
+    <div class="ab ab1" id="el-ad1">
+      <div class="abl">SPONSORED</div><div class="abt">New arrivals every day</div>
+      <div class="abs">10,000+ products added this week</div>
+      <div class="abc" id="el-explore">Explore now</div><div class="abd">🎁</div>
+    </div>
+    <div class="ab ab2" id="el-ad2">
+      <div class="abl">FEATURED</div><div class="abt">Premium membership</div>
+      <div class="abs">Free delivery + exclusive prices</div>
+      <div class="abc" id="el-join">Join free</div><div class="abd">👑</div>
+    </div>
+  </div>
+
+  <div class="section" style="padding-top:0;">
+    <div class="sect">Flash deals</div>
+    <div class="pgrid" id="fgrid"></div>
+  </div>
+
+  <div class="fads">
+    <div class="fa" id="el-ship"><span class="fai">🚚</span><div><div class="fat">Free shipping</div><div class="fas">Orders over $49</div></div></div>
+    <div class="fa" id="el-ret"><span class="fai">🔄</span><div><div class="fat">30-day returns</div><div class="fas">No questions asked</div></div></div>
+    <div class="fa" id="el-sec"><span class="fai">🔒</span><div><div class="fat">Secure payments</div><div class="fas">256-bit encryption</div></div></div>
+    <div class="fa" id="el-sup"><span class="fai">📞</span><div><div class="fat">24/7 support</div><div class="fas">Live chat available</div></div></div>
+  </div>
+
+</div>
+
+<!-- ── LIVE MONITOR BAR (replaces side panel — full monitor is in Flask /realtime) ── -->
+<div id="monitor-bar" style="position:fixed;bottom:0;left:0;right:0;background:#0d1117;border-top:2px solid #ef4444;z-index:9990;display:flex;align-items:center;gap:14px;padding:8px 20px;font-family:'Space Mono',monospace;font-size:11px;">
+  <div style="display:flex;align-items:center;gap:6px;color:#f1f5f9;">
+    <span style="width:7px;height:7px;border-radius:50%;background:#ef4444;animation:bpulse .9s infinite;display:inline-block;"></span>
+    <strong>Live Fraud Monitor</strong>
+  </div>
+  <div style="display:flex;gap:16px;flex:1;">
+    <span style="color:#9ca3af;">Total: <span id="mb-total" style="color:#f1f5f9;">0</span></span>
+    <span style="color:#ef4444;">Fraud: <span id="mb-fraud">0</span></span>
+    <span style="color:#22c55e;">Legit: <span id="mb-legit">0</span></span>
+    <span style="color:#f59e0b;">Signals: <span id="mb-sigs">0</span></span>
+    <span style="color:#9ca3af;">API:
+      <input id="api-url" value="http://127.0.0.1:5000/api/predict" style="background:transparent;border:none;border-bottom:1px solid #374151;color:#93c5fd;font-family:inherit;font-size:10px;width:200px;outline:none;padding:0 2px;">
+    </span>
+    <span id="conn-badge" style="background:#374151;color:#9ca3af;padding:2px 8px;border-radius:3px;font-size:9px;">OFF</span>
+  </div>
+  <a href="http://127.0.0.1:5000/realtime" target="_blank" style="background:#ef4444;color:#fff;padding:5px 14px;border-radius:5px;text-decoration:none;font-size:10px;font-weight:700;white-space:nowrap;">Open Full Monitor ↗</a>
+</div>
+<div style="height:46px;"></div><!-- spacer for fixed bar -->
+
+</div><!-- end .layout -->
+
+<script>
+const PRODS=[
+  {n:'AirBuds Pro',d:'Noise cancelling wireless',p:'$49',o:'$99',img:'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=200&fit=crop',b:'HOT'},
+  {n:'SmartWatch X9',d:'Health + GPS tracking',p:'$79',o:'$149',img:'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=200&fit=crop',b:'NEW'},
+  {n:'USB-C Hub 7-in-1',d:'4K HDMI, PD 100W',p:'$24',o:'$45',img:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=200&fit=crop',b:null},
+  {n:'Webcam Pro 4K',d:'Auto-focus, ring light',p:'$89',o:'$170',img:'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=400&h=200&fit=crop',b:'TOP'},
+  {n:'Mech Keyboard',d:'RGB backlit, tactile',p:'$65',o:'$120',img:'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=400&h=200&fit=crop',b:null},
+  {n:'Portable SSD 1TB',d:'1000MB/s read speed',p:'$59',o:'$110',img:'https://images.unsplash.com/photo-1531492746076-161ca9bcad58?w=400&h=200&fit=crop',b:'DEAL'},
+];
+const FLASH=[
+  {n:'65W Fast Charger',d:'GaN, foldable plug',p:'$18',o:'$35',img:'https://images.unsplash.com/photo-1585338447937-7082f8fc763d?w=400&h=200&fit=crop',b:'70% OFF'},
+  {n:'Phone Case Pro',d:'Military drop protection',p:'$14',o:'$28',img:'https://images.unsplash.com/photo-1601593346740-925612772716?w=400&h=200&fit=crop',b:null},
+  {n:'Cable Bundle x3',d:'1m USB-C braided',p:'$12',o:'$22',img:'https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=400&h=200&fit=crop',b:'DEAL'},
+  {n:'Laptop Stand',d:'Aluminium, adjustable',p:'$28',o:'$55',img:'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&h=200&fit=crop',b:null},
+];
+function makeGrid(list,id){
+  document.getElementById(id).innerHTML=list.map((p,i)=>`
+    <div class="pc" id="el-p${id[0]}${i}">
+      ${p.b?`<div class="pbdg">${p.b}</div>`:''}
+      <div class="pimg" style="padding:0;overflow:hidden;"><img src="${p.img}" alt="${p.n}" style="width:100%;height:120px;object-fit:cover;display:block;" loading="lazy" onerror="this.parentElement.innerHTML='<div style=width:100%;height:120px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:32px;>📦</div>';"></div>
+      <div class="pb"><div class="pn">${p.n}</div><div class="pd">${p.d}</div>
+      <div><span class="pp">${p.p}</span><span class="po">${p.o}</span></div>
+      <button class="add-btn" id="el-a${id[0]}${i}">Add to cart</button></div>
+    </div>`).join('');
+}
+makeGrid(PRODS,'pgrid');makeGrid(FLASH,'fgrid');
+
+const TGTS=['el-strip','el-elec','el-fash','el-home','el-deals','el-sale','el-cart',
+  'el-hshop','el-hbro','el-ad1','el-ad2','el-explore','el-join',
+  'el-ship','el-ret','el-sec','el-sup',
+  'el-pp0','el-pp1','el-pp2','el-pp3','el-pp4','el-pp5',
+  'el-ap0','el-ap1','el-ap2','el-ap3','el-ap4','el-ap5',
+  'el-fp0','el-fp1','el-fp2','el-fp3',
+  'el-af0','el-af1','el-af2','el-af3',
+  'el-ad-apple','el-ad-sam','el-ad-sony','el-ad-dell'];
+
+// 18 Feature definitions
+const FEATS=[
+  {id:'F01',lbl:'F01 Click-burst rate',cls:'tv',cat:'sv',
+   sigs:['34 clicks/60s','HIGH velocity'],why:'Bots: 30-50/min. Humans: 1-3/min.',
+   pay:()=>mkBot('192.168.1.42',2),n:8,d:120},
+  {id:'F02',lbl:'F02 Abnormal CTR',cls:'tv',cat:'sv',
+   sigs:['CTR: 84.7%','App 3521 anomaly'],why:'Real CTR is 0.1-2%. 84% = bots inflating clicks.',
+   pay:()=>mkBot(`10.${ri(255)}.${ri(255)}.${ri(255)}`,14),n:5,d:200},
+  {id:'F03',lbl:'F03 Device mismatch',cls:'td',cat:'sd',
+   sigs:['Desktop+Android','OS mismatch'],why:'Bots spoof device but forget user-agent match.',
+   pay:()=>({ip:'172.16.4.5',app_id:'892',device:'Desktop',os:'Android',channel:'88',hour:10}),n:1,d:0},
+  {id:'F04',lbl:'F04 Impossible geo',cls:'tg2',cat:'sg',
+   sigs:['China to USA 3min','VPN-switching bot'],why:'12,000km in 3 minutes = physically impossible.',
+   pay:()=>mkBot('192.168.1.42',14),n:2,d:600},
+  {id:'F05',lbl:'F05 Subnet repeat',cls:'tn',cat:'sn',
+   sigs:['12 IPs in /24','Bot farm range'],why:'Bot farms buy /24 IP blocks for rotation.',
+   pay:()=>mkBot(`192.168.1.${ri(254)+1}`,3),n:7,d:150},
+  {id:'F06',lbl:'F06 Interclick <1s',cls:'tv',cat:'sv',
+   sigs:['ICI: 0.3s','Mechanical rhythm'],why:'Humans vary 2-30s. Bots use fixed intervals.',
+   pay:()=>mkBot('172.16.4.5',2),n:10,d:300},
+  {id:'F07',lbl:'F07 Night activity',cls:'tt',cat:'st',
+   sigs:['Hour: 2am','Off-hours flag=1'],why:'Night traffic is 8x more likely to be fraud.',
+   pay:()=>mkBot('45.33.32.156',2),n:4,d:200},
+  {id:'F08',lbl:'F08 UA entropy',cls:'td',cat:'sd',
+   sigs:['23 UAs from 1 IP','High UA entropy'],why:'Bots rotate UA strings to evade detection.',
+   pay:()=>mkBot('10.0.1.77',3),n:5,d:180},
+  {id:'F09',lbl:'F09 Subnet count',cls:'tn',cat:'sn',
+   sigs:['340 subnet clicks','Bot farm IPs'],why:'Aggregate subnet > 50/hour = coordinated attack.',
+   pay:()=>mkBot(`172.16.4.${ri(254)+1}`,3),n:7,d:130},
+  {id:'F10',lbl:'F10 Click variance',cls:'tv',cat:'sv',
+   sigs:['Variance: 0.02s','Mechanical clock'],why:'Std dev < 0.5s between clicks = bot script.',
+   pay:()=>mkBot('8.8.4.4',3),n:8,d:200},
+  {id:'F11',lbl:'F11 Duplicate UA',cls:'td',cat:'sd',
+   sigs:['UA on 847 IPs','Botnet shared script'],why:'Same exact UA across many IPs = coordinated botnet.',
+   pay:()=>({ip:`${ri(255)}.${ri(255)}.${ri(255)}.${ri(255)}`,app_id:'3521',device:'Mobile',os:'Android',channel:'213',hour:ri(24)}),n:4,d:200},
+  {id:'F12',lbl:'F12 CPI ratio',cls:'tv',cat:'sv',
+   sigs:['CPI: 100%','Impossible ratio'],why:'5 clicks on 5 impressions = impossible for real users.',
+   pay:()=>mkBot('192.168.1.42',2),n:5,d:200},
+  {id:'F13',lbl:'F13 Hour cyclic',cls:'tt',cat:'st',
+   sigs:['sin(2am)=0.52','Cyclic fraud pattern'],why:'sin/cos encoding: hour 23 and 1am treated similarly.',
+   pay:()=>mkBot('185.60.216.35',2),n:3,d:250},
+  {id:'F14',lbl:'F14 Clicks per min',cls:'tv',cat:'sv',
+   sigs:['47 clicks/min','Velocity HIGH'],why:'clicks_60s — your existing velocity feature.',
+   pay:()=>mkBot('192.168.1.42',2),n:12,d:100},
+  {id:'F15',lbl:'F15 Distinct UA/IP',cls:'td',cat:'sd',
+   sigs:['15 UAs in 1hr','UA rotation detected'],why:'15 distinct UAs from one IP = bot rotating identities.',
+   pay:()=>mkBot('10.0.1.77',4),n:6,d:160},
+  {id:'F16',lbl:'F16 IP total clicks',cls:'tv',cat:'sv',
+   sigs:['1247 total clicks','Known offender IP'],why:'ip_count from TalkingData. High = repeat fraudster.',
+   pay:()=>mkBot('192.168.1.42',2),n:3,d:300},
+  {id:'F17',lbl:'F17 Subnet clicks',cls:'tn',cat:'sn',
+   sigs:['Subnet: 2840 total','IP block abuse'],why:'Bot farms buy /24 blocks. Aggregate exposes them.',
+   pay:()=>mkBot(`192.168.1.${ri(255)}`,3),n:5,d:180},
+  {id:'F18',lbl:'F18 Short ICI flag',cls:'tv',cat:'sv',
+   sigs:['ICI: 2.3s','Short ICI flag=1'],why:'Binary: 1 if last click from this IP < 10 seconds ago.',
+   pay:()=>mkBot('172.16.4.5',2),n:8,d:250},
+];
+
+function ri(n){return Math.floor(Math.random()*n);}
+function pick(a){return a[ri(a.length)];}
+function mkBot(ip,hour){return{ip,app_id:pick(['3521','892','1204','4401']),device:'Mobile',os:'Android',channel:pick(['213','88','45','102']),hour};}
+
+const HUM=['203.45.12.8','176.32.91.4','98.12.45.67','64.233.160.1','185.60.216.35'];
+const GHRS=[9,10,11,14,15,16,17,18,20];
+const DEVS=['Mobile','Desktop','Tablet'];
+function hPay(){return{app_id:String(ri(5000)+100),device:pick(DEVS),os:Math.random()>.5?'Android':'iOS',channel:String(ri(400)+10),hour:pick(GHRS)};}
+
+// Build floating trigger panel (replaces sidebar panel)
+const trigPanel=document.createElement('div');
+trigPanel.id='trig-panel';
+trigPanel.style.cssText='position:fixed;top:80px;right:16px;width:220px;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:10px;z-index:9980;padding:12px;display:none;flex-direction:column;gap:5px;max-height:70vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4);';
+trigPanel.innerHTML='<div style="font-size:9px;font-weight:700;color:#93c5fd;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.07);">Trigger 18 fraud features</div>';
+FEATS.forEach(f=>{
+  const b=document.createElement('button');
+  b.style.cssText='width:100%;text-align:left;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:5px;color:#e2e8f0;font-size:9px;font-family:monospace;padding:5px 8px;cursor:pointer;transition:all .15s;';
+  b.textContent=f.lbl;b.title=f.why;
+  b.onmouseenter=()=>b.style.background='rgba(239,68,68,.15)';
+  b.onmouseleave=()=>b.style.background='rgba(255,255,255,.04)';
+  b.onclick=()=>trigFeat(f);
+  trigPanel.appendChild(b);
+});
+const divider=document.createElement('div');divider.style.cssText='border-top:1px solid rgba(255,255,255,.07);margin:4px 0;';
+trigPanel.appendChild(divider);
+const lb=document.createElement('button');
+lb.style.cssText='width:100%;text-align:left;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:5px;color:#22c55e;font-size:9px;font-family:monospace;padding:5px 8px;cursor:pointer;';
+lb.textContent='✓ Human click (legit)';lb.onclick=trigLegit;trigPanel.appendChild(lb);
+const cb=document.createElement('button');
+cb.style.cssText='width:100%;text-align:left;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:5px;color:#6b7280;font-size:9px;font-family:monospace;padding:5px 8px;cursor:pointer;margin-top:3px;';
+cb.textContent='✕ Clear stats';cb.onclick=clearFeed;trigPanel.appendChild(cb);
+document.body.appendChild(trigPanel);
+
+// Floating trigger toggle button
+const trigToggle=document.createElement('button');
+trigToggle.style.cssText='position:fixed;top:80px;right:16px;background:#0d1117;border:1px solid rgba(239,68,68,.4);color:#ef4444;font-size:10px;font-family:monospace;padding:6px 12px;border-radius:6px;cursor:pointer;z-index:9981;';
+trigToggle.textContent='⚡ Triggers';
+trigToggle.onclick=()=>{
+  const open=trigPanel.style.display==='flex';
+  trigPanel.style.display=open?'none':'flex';
+  trigToggle.style.display=open?'block':'none';
+};
+document.body.appendChild(trigToggle);
+
+let tot=0,fra=0,leg=0,sigs=0;
+let bFire=false,bTimer=null,bTgt=null;
+let bx=16,by=110,dox=0,doy=0,isDrag=false;
+const ball=document.getElementById('bot-ball');
+ball.style.left=bx+'px';ball.style.top=by+'px';
+
+const API=()=>document.getElementById('api-url').value.trim();
+
+async function sendClick(payload,feat,cx,cy){
+  let res,conf,isFraud;
+  try{
+    const r=await fetch(API(),{method:'POST',headers:{'Content-Type':'application/json'},mode:'cors',body:JSON.stringify(payload)});
+    const d=await r.json();res=d.result;conf=d.confidence;
+    document.getElementById('conn-badge').textContent='LIVE';
+    document.getElementById('conn-badge').style.background='#166534';
+    document.getElementById('conn-badge').style.color='#22c55e';
+  }catch{
+    isFraud=!!feat;res=isFraud?'Fraudulent':'Legitimate';conf=isFraud?75+ri(25):65+ri(20);
+    document.getElementById('conn-badge').textContent='LOCAL';
+    document.getElementById('conn-badge').style.background='#78350f';
+    document.getElementById('conn-badge').style.color='#f59e0b';
+  }
+  isFraud=res==='Fraudulent';
+  tot++;if(isFraud)fra++;else leg++;
+  sigs+=feat?feat.sigs.length:0;
+  updStats();addFeed(payload.ip,res,conf,feat);
+  if(cx!=null)ripple(cx,cy,isFraud);
+}
+
+function trigFeat(feat){
+  const els=[...document.querySelectorAll('.pc,.fa,.ab')];
+  const el=els[ri(els.length)];
+  const b=el?el.getBoundingClientRect():{left:window.innerWidth/3,top:window.innerHeight/2,width:60,height:40};
+  const cx=b.left+b.width/2,cy=b.top+b.height/2;
+  for(let i=0;i<feat.n;i++)setTimeout(()=>sendClick(feat.pay(),feat,cx,cy),i*(feat.d||150));
+}
+function trigLegit(){
+  const els=[...document.querySelectorAll('.pc,.fa')];
+  const el=els[ri(els.length)];
+  const b=el?el.getBoundingClientRect():{left:window.innerWidth/3,top:window.innerHeight/2,width:60,height:40};
+  sendClick(hPay(),null,b.left+b.width/2,b.top+b.height/2);
+}
+
+function addFeed(ip,res,conf,feat){
+  const isFraud=res==='Fraudulent';
+  const toast=document.createElement('div');
+  toast.style.cssText=`position:fixed;bottom:56px;right:16px;background:${isFraud?'#fde8ea':'#dcfce7'};border:1px solid ${isFraud?'#fecdd3':'#bbf7d0'};color:${isFraud?'#c0152b':'#15803d'};padding:7px 14px;border-radius:7px;font-size:11px;font-family:'Space Mono',monospace;z-index:9995;pointer-events:none;box-shadow:0 2px 12px rgba(0,0,0,.1);`;
+  const conf2=typeof conf==='number'?conf.toFixed(1):conf;
+  toast.textContent=`${isFraud?'⚠ FRAUD':'✓ LEGIT'} · ${ip} · ${conf2}%${feat?' · '+feat.id:''}`;
+  document.body.appendChild(toast);
+  setTimeout(()=>{toast.style.opacity='0';toast.style.transition='opacity .3s';},1800);
+  setTimeout(()=>toast.remove(),2200);
+}
+function updStats(){
+  document.getElementById('mb-total').textContent=tot;
+  document.getElementById('mb-fraud').textContent=fra;
+  document.getElementById('mb-legit').textContent=leg;
+  document.getElementById('mb-sigs').textContent=sigs;
+}
+function clearFeed(){
+  tot=fra=leg=sigs=0;updStats();
+}
+function ripple(x,y,isFraud){
+  const d=document.createElement('div');d.className='ripple '+(isFraud?'r-fraud':'r-legit');
+  d.style.cssText=`left:${x}px;top:${y}px;`;document.body.appendChild(d);setTimeout(()=>d.remove(),700);
+}
+
+// Bot ball drag
+ball.addEventListener('mousedown',e=>{isDrag=true;dox=e.clientX-bx;doy=e.clientY-by;ball.classList.add('dragging');stopBot();e.stopPropagation();});
+ball.addEventListener('touchstart',e=>{const t=e.touches[0];isDrag=true;dox=t.clientX-bx;doy=t.clientY-by;ball.classList.add('dragging');stopBot();e.preventDefault();},{passive:false});
+document.addEventListener('mousemove',mv);
+document.addEventListener('touchmove',e=>{if(isDrag)mv(e.touches[0]);},{passive:false});
+document.addEventListener('mouseup',endD);
+document.addEventListener('touchend',e=>endD(e.changedTouches[0]));
+
+function mv(e){
+  if(!isDrag)return;
+  bx=Math.max(0,Math.min(window.innerWidth-56,e.clientX-dox));
+  by=Math.max(0,Math.min(window.innerHeight-56,e.clientY-doy));
+  ball.style.left=bx+'px';ball.style.top=by+'px';
+  clrHL();const ht=getEl(e.clientX,e.clientY);if(ht)ht.classList.add('drop-ready');
+}
+function endD(e){
+  if(!isDrag)return;isDrag=false;ball.classList.remove('dragging');clrHL();
+  const t=getEl(e.clientX,e.clientY);
+  if(t)snapFire(t);else{document.getElementById('bst').textContent='drag me';ball.classList.remove('firing');}
+}
+function getEl(cx,cy){
+  for(const id of TGTS){const el=document.getElementById(id);if(!el)continue;const b=el.getBoundingClientRect();if(cx>=b.left&&cx<=b.right&&cy>=b.top&&cy<=b.bottom)return el;}
+  return null;
+}
+function clrHL(){TGTS.forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('drop-ready');});}
+function snapFire(target){
+  bTgt=target;bFire=true;ball.classList.add('firing');
+  document.getElementById('bst').textContent='firing!';
+  const tr=target.getBoundingClientRect();
+  bx=tr.left+tr.width/2-28;by=tr.top+tr.height/2-28;
+  ball.style.left=bx+'px';ball.style.top=by+'px';
+  const fire=()=>{
+    if(!bFire||!bTgt)return;
+    const tr2=bTgt.getBoundingClientRect();
+    const cx=tr2.left+tr2.width/2,cy=tr2.top+tr2.height/2;
+    const f=FEATS[0];
+    for(let i=0;i<3;i++)setTimeout(()=>sendClick(f.pay(),f,cx,cy),i*100);
+    by=cy-28;ball.style.top=by+'px';
+  };
+  fire();bTimer=setInterval(fire,380);
+}
+function stopBot(){bFire=false;clearInterval(bTimer);bTgt=null;ball.classList.remove('firing');document.getElementById('bst').textContent='drag me';}
+
+// Human clicks on website elements
+document.getElementById('sw').addEventListener('click',e=>{
+  if(ball.contains(e.target))return;
+  for(const id of TGTS){const el=document.getElementById(id);if(el&&el.contains(e.target)&&!bFire){sendClick(hPay(),null,e.clientX,e.clientY);break;}}
+});
+</script>
+<!-- AdFraud Shield Tracking Script — supernova -->
+<!--/////////////////////////////////////////////////////////////////////////////////////////////////-->
+</body>
+</html>

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <div class="page-title">Prediction Logs</div>
+    <div class="page-sub">All {{ logs.total }} fraud detection predictions — paginated</div>
+  </div>
+  <div class="page-hdr-actions">
+    <a href="/records" class="btn btn-outline btn-sm">
+      <svg viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+      Export CSV
+    </a>
+    <div style="display:flex;gap:6px;">
+      <a href="/logs?filter=all" class="btn {% if filter=='all' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">All</a>
+      <a href="/logs?filter=Fraudulent" class="btn {% if filter=='Fraudulent' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">Fraud</a>
+      <a href="/logs?filter=Legitimate" class="btn {% if filter=='Legitimate' %}btn-outline{% else %}btn-outline{% endif %} btn-sm">Legit</a>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr style="background:var(--body-bg);">
+          <th style="background:var(--body-bg);"><input type="checkbox" style="cursor:pointer;"></th>
+          <th style="background:var(--body-bg);color:var(--blue);">#</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Timestamp</th>
+          <th style="background:var(--body-bg);color:var(--blue);">IP Address</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Device</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Country</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Hour</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Velocity</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Signals</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Result</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Confidence</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Model</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs.items %}
+        <tr>
+          <td><input type="checkbox" style="cursor:pointer;"></td>
+          <td style="color:var(--ink2);font-size:11px;">#{{ log.id }}</td>
+          <td class="mono" style="white-space:nowrap;">{{ log.timestamp }}</td>
+          <td class="mono">{{ log.ip }}</td>
+          <td>
+            <div style="font-size:12px;font-weight:500;">{{ log.device }}</div>
+            <div style="font-size:10px;color:var(--ink2);">{{ log.os }}</div>
+          </td>
+          <td style="font-size:12px;">{{ log.country or '—' }}</td>
+          <td style="font-size:12px;">{{ log.hour }}:00</td>
+          <td><span class="badge {% if log.velocity=='HIGH' %}b-danger{% elif log.velocity=='MEDIUM' %}b-warning{% else %}b-default{% endif %}">{{ log.velocity }}</span></td>
+          <td><span style="font-family:monospace;font-size:12px;font-weight:600;color:{% if log.signals and log.signals > 3 %}var(--acc){% else %}var(--ink2){% endif %};">{{ log.signals or 0 }}</span></td>
+          <td><span class="badge {% if log.result=='Fraudulent' %}b-fraud{% else %}b-legit{% endif %}">{{ log.result }}</span></td>
+          <td>
+            <div class="conf-wrap">
+              <div class="conf-bar"><div class="conf-fill" style="width:{{ log.confidence }}%;background:{% if log.result=='Fraudulent' %}var(--acc){% else %}var(--grn){% endif %};"></div></div>
+              <span style="font-size:11px;font-weight:600;">{{ log.confidence|round(1) }}%</span>
+            </div>
+          </td>
+          <td style="font-size:11px;color:var(--ink2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ log.model_used }}</td>
+          <td class="tbl-actions"><button title="Details">&#8943;</button></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="13" style="text-align:center;padding:32px;color:var(--ink2);">No predictions yet. Go to <a href="/" style="color:var(--blue);">Predict</a> to start.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tbl-footer">
+    <div class="pag-info">Showing {{ logs.items|length }} of {{ logs.total }} entries</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="display-select">
+        Display <select onchange="window.location='/logs?page=1'"><option>50</option></select> per page
+      </div>
+      <div class="pag">
+        {% if logs.has_prev %}
+        <a href="/logs?page={{ logs.prev_num }}&filter={{ filter }}" class="pag-btn">&#8249;</a>
+        {% endif %}
+        {% for p in logs.iter_pages() %}
+          {% if p %}
+          <a href="/logs?page={{ p }}&filter={{ filter }}" class="pag-btn {% if p == logs.page %}active{% endif %}">{{ p }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if logs.has_next %}
+        <a href="/logs?page={{ logs.next_num }}&filter={{ filter }}" class="pag-btn">&#8250;</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <div class="page-title">Set API Keys</div>
+    <div class="page-sub">Configure AI, Telegram and email credentials at runtime — no restart required</div>
+  </div>
+</div>
+
+<!-- ── STATUS CARDS ── -->
+<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon {% if has_anthropic %}si-grn{% else %}si-red{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">Anthropic (Claude)</div>
+      <div class="stat-val" style="font-size:15px;color:{% if has_anthropic %}var(--grn){% else %}var(--acc){% endif %};">
+        {% if has_anthropic %}● Active{% else %}○ Not set{% endif %}
+      </div>
+      <div class="stat-trend" style="color:var(--ink2);">Paid subscription</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon {% if has_gemini %}si-grn{% else %}si-amb{% endif %}">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">Google Gemini</div>
+      <div class="stat-val" style="font-size:15px;color:{% if has_gemini %}var(--grn){% else %}var(--amb){% endif %};">
+        {% if has_gemini %}● Active{% else %}○ Not set{% endif %}
+      </div>
+      <div class="stat-trend" style="color:var(--grn);font-weight:600;">FREE tier available</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon {% if has_email %}si-grn{% else %}si-red{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">Email alerts</div>
+      <div class="stat-val" style="font-size:15px;color:{% if has_email %}var(--grn){% else %}var(--acc){% endif %};">
+        {% if has_email %}● Active{% else %}○ Not set{% endif %}
+      </div>
+      <div class="stat-trend" style="color:var(--ink2);">{% if has_email %}{{ cfg.email[:20] }}...{% else %}Gmail not configured{% endif %}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon {% if has_telegram %}si-grn{% else %}si-red{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <div class="stat-body">
+      <div class="stat-label">Telegram alerts</div>
+      <div class="stat-val" style="font-size:15px;color:{% if has_telegram %}var(--grn){% else %}var(--acc){% endif %};">
+        {% if has_telegram %}● Active{% else %}○ Not set{% endif %}
+      </div>
+      <div class="stat-trend" style="color:var(--ink2);">{% if has_telegram %}Bot configured{% else %}Not configured{% endif %}</div>
+    </div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+
+    <!-- ── AI ENGINE SECTION ── -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-hdr">
+        <div>
+          <div class="card-title">AI Agent Engine</div>
+          <div class="card-sub">System uses keys in priority order: Anthropic → Gemini → Local</div>
+        </div>
+        <span class="badge {% if has_anthropic %}b-legit{% elif has_gemini %}b-legit{% else %}b-warning{% endif %}">
+          {% if has_anthropic %}Claude active{% elif has_gemini %}Gemini active{% else %}Local fallback{% endif %}
+        </span>
+      </div>
+
+      <!-- Gemini FREE -->
+      <div style="background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:16px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <span style="font-size:13px;font-weight:600;color:var(--ink);">Google Gemini API Key</span>
+            <span class="badge b-legit" style="margin-left:6px;font-size:9px;">FREE</span>
+            {% if not has_anthropic and has_gemini %}<span class="badge b-info" style="margin-left:4px;font-size:9px;">● IN USE</span>{% endif %}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="gemini-status-dot" style="width:8px;height:8px;border-radius:50%;background:{% if has_gemini %}var(--grn){% else %}var(--bdr2){% endif %};display:inline-block;"></span>
+            <span style="font-size:11px;color:{% if has_gemini %}var(--grn){% else %}var(--ink2){% endif %};" id="gemini-status-txt">
+              {% if has_gemini %}✓ Key saved &amp; working{% else %}Not configured{% endif %}
+            </span>
+          </div>
+        </div>
+        <form method="POST" id="gemini-form" style="display:flex;gap:8px;margin-bottom:8px;">
+          <input type="hidden" name="action" value="save_key">
+          <input type="hidden" name="key_name" value="GEMINI_API_KEY">
+          <input type="password" name="key_value" id="gemini-input"
+                 placeholder="AIzaSy..."
+                 style="flex:1;border:1px solid var(--bdr2);border-radius:7px;padding:9px 12px;font-size:12px;outline:none;font-family:var(--mono);">
+          <button type="submit" class="btn btn-success btn-sm">Save</button>
+          {% if has_gemini %}
+          <button type="button" class="btn btn-danger btn-sm" onclick="removeKey('GEMINI_API_KEY','gemini-form')">Remove</button>
+          {% endif %}
+          <button type="button" class="btn btn-outline btn-sm" onclick="testKey('gemini')">Test</button>
+        </form>
+        <div style="font-size:11px;color:var(--ink2);">
+          🆓 Get free key in 30 seconds:
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--blue);font-weight:600;">aistudio.google.com/app/apikey</a>
+          — sign in with Google, click "Create API key". No credit card needed.
+        </div>
+        <div id="gemini-test-result" style="display:none;margin-top:8px;padding:8px 10px;border-radius:6px;font-size:11px;"></div>
+      </div>
+
+      <!-- Anthropic PAID -->
+      <div style="background:var(--body-bg);border:1px solid var(--bdr);border-radius:8px;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <span style="font-size:13px;font-weight:600;color:var(--ink);">Anthropic API Key</span>
+            <span class="badge b-warning" style="margin-left:6px;font-size:9px;">PAID</span>
+            {% if has_anthropic %}<span class="badge b-info" style="margin-left:4px;font-size:9px;">● IN USE</span>{% endif %}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:{% if has_anthropic %}var(--grn){% else %}var(--bdr2){% endif %};display:inline-block;"></span>
+            <span style="font-size:11px;color:{% if has_anthropic %}var(--grn){% else %}var(--ink2){% endif %};">
+              {% if has_anthropic %}✓ Key saved{% else %}Not configured{% endif %}
+            </span>
+          </div>
+        </div>
+        <form method="POST" id="anthropic-form" style="display:flex;gap:8px;margin-bottom:8px;">
+          <input type="hidden" name="action" value="save_key">
+          <input type="hidden" name="key_name" value="ANTHROPIC_API_KEY">
+          <input type="password" name="key_value"
+                 placeholder="sk-ant-..."
+                 style="flex:1;border:1px solid var(--bdr2);border-radius:7px;padding:9px 12px;font-size:12px;outline:none;font-family:var(--mono);">
+          <button type="submit" class="btn btn-blue btn-sm">Save</button>
+          {% if has_anthropic %}
+          <button type="button" class="btn btn-danger btn-sm" onclick="removeKey('ANTHROPIC_API_KEY','anthropic-form')">Remove</button>
+          {% endif %}
+        </form>
+        <div style="font-size:11px;color:var(--ink2);">
+          Get key: <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue);">console.anthropic.com</a> — requires paid subscription
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EMAIL ALERTS ── -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-hdr">
+        <div class="card-title">Email Alerts</div>
+        <span class="badge {% if has_email %}b-legit{% else %}b-default{% endif %}">
+          {% if has_email %}● Active{% else %}Not set{% endif %}
+        </span>
+      </div>
+      <div style="border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:500;color:var(--ink);margin-bottom:8px;">Gmail address</div>
+        <form method="POST" style="display:flex;gap:8px;">
+          <input type="hidden" name="action" value="save_key">
+          <input type="hidden" name="key_name" value="ALERT_EMAIL">
+          <input type="email" name="key_value" placeholder="your@gmail.com"
+                 value="{{ cfg.email }}"
+                 style="flex:1;border:1px solid var(--bdr2);border-radius:7px;padding:9px 12px;font-size:12px;outline:none;">
+          <button type="submit" class="btn btn-blue btn-sm">Save</button>
+        </form>
+      </div>
+      <div style="border:1px solid var(--bdr);border-radius:8px;padding:14px;">
+        <div style="font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Gmail app password</div>
+        <div style="font-size:11px;color:var(--ink2);margin-bottom:8px;">Not your Gmail password — generate one at Google Account → Security → App passwords</div>
+        <form method="POST" style="display:flex;gap:8px;">
+          <input type="hidden" name="action" value="save_key">
+          <input type="hidden" name="key_name" value="SMTP_PASS">
+          <input type="password" name="key_value" placeholder="16-character app password"
+                 style="flex:1;border:1px solid var(--bdr2);border-radius:7px;padding:9px 12px;font-size:12px;outline:none;font-family:var(--mono);">
+          <button type="submit" class="btn btn-blue btn-sm">Save</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── TELEGRAM ── -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">Telegram Alerts</div>
+        <span class="badge {% if has_telegram %}b-legit{% else %}b-default{% endif %}">
+          {% if has_telegram %}● Active{% else %}Not set{% endif %}
+        </span>
+      </div>
+      <div style="border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:500;color:var(--ink);margin-bottom:8px;">Bot token</div>
+        <form method="POST" id="telegram-form" style="display:flex;gap:8px;">
+          <input type="hidden" name="action" value="save_key">
+          <input type="hidden" name="key_name" value="TELEGRAM_TOKEN">
+          <input type="password" name="key_value" placeholder="123456789:AABBccDD..."
+                 style="flex:1;border:1px solid var(--bdr2);border-radius:7px;padding:9px 12px;font-size:12px;outline:none;font-family:var(--mono);">
+          <button type="submit" class="btn btn-blue btn-sm">Save</button>
+          {% if has_telegram %}
+          <button type="button" class="btn btn-danger btn-sm" onclick="removeKey('TELEGRAM_TOKEN','telegram-form')">Remove</button>
+          {% endif %}
+        </form>
+      </div>
+      <div style="border:1px solid var(--bdr);border-radius:8px;padding:14px;">
+        <div style="font-size:12px;font-weight:500;color:var(--ink);margin-bottom:8px;">Chat ID</div>
+        <form method="POST" style="display:flex;gap:8px;">
+          <input type="hidden" name="action" value="save_key">
+          <input type="hidden" name="key_name" value="TELEGRAM_CHAT_ID">
+          <input type="text" name="key_value" placeholder="-100123456789"
+                 style="flex:1;border:1px solid var(--bdr2);border-radius:7px;padding:9px 12px;font-size:12px;outline:none;font-family:var(--mono);">
+          <button type="submit" class="btn btn-blue btn-sm">Save</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <div>
+
+    <!-- ── AI PRIORITY INDICATOR ── -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">Active AI engine</div>
+      <div style="margin-top:12px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr);">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--body-bg);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink2);">1</div>
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:600;color:var(--ink);">Anthropic Claude</div>
+            <div style="font-size:10px;color:var(--ink2);">Full tool-use, 18-signal analysis</div>
+          </div>
+          <span class="badge {% if has_anthropic %}b-legit{% else %}b-default{% endif %}">
+            {% if has_anthropic %}● IN USE{% else %}Not set{% endif %}
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr);">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--body-bg);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink2);">2</div>
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:600;color:var(--ink);">Google Gemini <span style="color:var(--grn);font-size:10px;font-weight:400;">(free)</span></div>
+            <div style="font-size:10px;color:var(--ink2);">Live DB context, fast responses</div>
+          </div>
+          <span class="badge {% if has_gemini and not has_anthropic %}b-legit{% elif has_gemini %}b-default{% else %}b-default{% endif %}">
+            {% if has_gemini and not has_anthropic %}● IN USE{% elif has_gemini %}Ready{% else %}Not set{% endif %}
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--body-bg);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink2);">3</div>
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:600;color:var(--ink);">Local rule-based</div>
+            <div style="font-size:10px;color:var(--ink2);">No API key needed, always works</div>
+          </div>
+          <span class="badge {% if not has_anthropic and not has_gemini %}b-warning{% else %}b-default{% endif %}">
+            {% if not has_anthropic and not has_gemini %}● IN USE{% else %}Standby{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HOW TO GET KEYS ── -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">How to get these keys</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+
+        <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px 14px;">
+          <div style="font-size:12px;font-weight:600;color:var(--grn);margin-bottom:6px;">🆓 Google Gemini — Free</div>
+          <div style="font-size:11px;color:var(--ink2);line-height:1.8;">
+            1. Open <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--blue);font-weight:500;">aistudio.google.com/app/apikey</a><br>
+            2. Sign in with any Google account<br>
+            3. Click <strong>"Create API key"</strong><br>
+            4. Copy and paste into the field above
+          </div>
+        </div>
+
+        <div style="background:var(--body-bg);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;">
+          <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px;">Gmail App Password</div>
+          <div style="font-size:11px;color:var(--ink2);line-height:1.8;">
+            Google Account → Security → 2-Step Verification<br>
+            → App passwords → Select app → Generate
+          </div>
+        </div>
+
+        <div style="background:var(--body-bg);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;">
+          <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px;">Telegram Bot</div>
+          <div style="font-size:11px;color:var(--ink2);line-height:1.8;">
+            1. Message <strong>@BotFather</strong> on Telegram<br>
+            2. Send <code style="background:var(--bdr);padding:1px 4px;border-radius:3px;">/newbot</code> → follow steps → copy token<br>
+            3. Get your Chat ID from <strong>@userinfobot</strong>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── SECURITY NOTICE ── -->
+    <div class="card">
+      <div class="card-title">Security notice</div>
+      <div style="font-size:12px;color:var(--ink2);line-height:1.7;margin-top:8px;">
+        Keys are stored in <strong>process environment only</strong> — they are lost when Flask restarts. For permanent storage, set them before starting the app:
+      </div>
+      <div style="background:var(--body-bg);border:1px solid var(--bdr);border-radius:6px;padding:12px;font-family:var(--mono);font-size:10px;margin-top:8px;line-height:2;color:var(--ink);">
+        <span style="color:var(--ink2);"># Windows</span><br>
+        set GEMINI_API_KEY=AIzaSy...<br>
+        set ALERT_EMAIL=your@gmail.com<br><br>
+        <span style="color:var(--ink2);"># Linux / Mac</span><br>
+        export GEMINI_API_KEY=AIzaSy...<br>
+        export ALERT_EMAIL=your@gmail.com
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function removeKey(keyName, formId) {
+  if (!confirm('Remove ' + keyName + '? The feature will be disabled until you add a new key.')) return;
+  const form = document.getElementById(formId);
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden'; hidden.name = 'key_value'; hidden.value = '';
+  // remove existing key_value if any
+  const existing = form.querySelector('input[name="key_value"]');
+  if (existing) existing.value = '';
+  form.submit();
+}
+
+function testKey(type) {
+  if (type === 'gemini') {
+    const key = document.getElementById('gemini-input').value.trim();
+    const res = document.getElementById('gemini-test-result');
+    if (!key) {
+      res.style.display = 'block';
+      res.style.background = 'rgba(239,68,68,.08)';
+      res.style.border = '1px solid rgba(239,68,68,.2)';
+      res.style.color = 'var(--acc)';
+      res.textContent = '⚠ Enter a Gemini API key first, then click Test.';
+      return;
+    }
+    res.style.display = 'block';
+    res.style.background = 'rgba(59,130,246,.08)';
+    res.style.border = '1px solid rgba(59,130,246,.2)';
+    res.style.color = 'var(--blue)';
+    res.textContent = 'Testing key...';
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({contents:[{parts:[{text:'Reply with just: OK'}]}]})
+    }).then(r => r.json()).then(d => {
+      if (d.candidates && d.candidates[0]) {
+        res.style.background = 'rgba(34,197,94,.08)';
+        res.style.border = '1px solid rgba(34,197,94,.2)';
+        res.style.color = 'var(--grn)';
+        res.textContent = '✓ Key is valid and working! Save it above.';
+      } else {
+        res.style.background = 'rgba(239,68,68,.08)';
+        res.style.border = '1px solid rgba(239,68,68,.2)';
+        res.style.color = 'var(--acc)';
+        if (d.error && d.error.code === 429) {
+        res.style.background = 'rgba(245,158,11,.08)';
+        res.style.border = '1px solid rgba(245,158,11,.2)';
+        res.style.color = 'var(--amb)';
+        res.textContent = '⚠ Key is valid but rate limited (429). Wait 1 min and test again — this is normal for free tier.';
+      } else {
+        res.textContent = '✗ Invalid response: ' + JSON.stringify(d).slice(0,100);
+      }
+      }
+    }).catch(e => {
+      res.style.background = 'rgba(239,68,68,.08)';
+      res.style.border = '1px solid rgba(239,68,68,.2)';
+      res.style.color = 'var(--acc)';
+      res.textContent = '✗ Error: ' + e.message;
+    });
+  }
+}
+</script>
+{% endblock %}

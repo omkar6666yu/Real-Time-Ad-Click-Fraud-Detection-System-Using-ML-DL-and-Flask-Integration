@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div><div class="page-title">Batch Prediction</div><div class="page-sub">Upload a CSV — bulk fraud predictions with GeoIP and velocity</div></div>
+</div>
+<div class="two-col">
+  <div class="card">
+    <div class="card-title">Upload CSV file</div>
+    <div style="border:2px dashed var(--bdr2);border-radius:8px;padding:28px;text-align:center;cursor:pointer;margin-bottom:14px;background:var(--body-bg);" onclick="document.getElementById('fi').click()">
+      <div style="font-size:28px;color:var(--ink3);margin-bottom:6px;">↑</div>
+      <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px;">Click to upload CSV</div>
+      <div style="font-size:11px;color:var(--ink2);" id="fname">No file selected</div>
+    </div>
+    <form method="POST" enctype="multipart/form-data">
+      <input type="file" id="fi" name="file" accept=".csv" style="display:none" onchange="document.getElementById('fname').textContent=this.files[0].name">
+      <button type="submit" class="btn btn-blue" style="width:100%;">Process batch</button>
+    </form>
+  </div>
+  <div class="card">
+    <div class="card-title">Expected CSV format</div>
+    <div style="background:var(--body-bg);border:1px solid var(--bdr);border-radius:6px;padding:12px;font-family:var(--mono);font-size:11px;color:var(--ink2);line-height:2.1;">
+      ip,app,device,os,channel,hour<br>192.168.1.1,3521,Mobile,Android,213,14<br>10.0.0.5,1204,Tablet,iOS,88,9
+    </div>
+    <div style="margin-top:12px;font-size:11px;color:var(--ink2);">Required: <span style="font-family:var(--mono);color:var(--ink);">ip, app, device, os, channel, hour</span></div>
+  </div>
+</div>
+{% if results %}
+<div class="card" style="margin-top:14px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div class="card-title" style="margin:0">Results — {{ results|length }} clicks</div>
+    <div style="font-size:11px;display:flex;gap:12px;">
+      <span style="color:var(--acc);font-weight:600;">Fraud: {{ results|selectattr('prediction','equalto','Fraudulent')|list|length }}</span>
+      <span style="color:var(--grn);font-weight:600;">Legit: {{ results|selectattr('prediction','equalto','Legitimate')|list|length }}</span>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th style="background:var(--body-bg);color:var(--blue);">IP</th>
+        <th style="background:var(--body-bg);color:var(--blue);">App</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Device</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Country</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Velocity</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Confidence</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Prediction</th>
+      </tr></thead>
+      <tbody>{% for r in results %}<tr>
+        <td class="mono">{{ r.ip }}</td>
+        <td class="mono">{{ r.app }}</td>
+        <td>{{ r.device }}</td>
+        <td style="font-size:11px">{{ r.country }}</td>
+        <td><span class="badge b-{{ r.velocity|lower }}">{{ r.velocity }}</span></td>
+        <td class="mono">{{ r.confidence }}%</td>
+        <td>{% if r.prediction=='Fraudulent' %}<span class="badge b-fraud">FRAUD</span>{% else %}<span class="badge b-legit">LEGIT</span>{% endif %}</td>
+      </tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

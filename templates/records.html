@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <div class="page-title">Records &amp; Export</div>
+    <div class="page-sub">View, filter and download prediction records as CSV</div>
+  </div>
+</div>
+
+<!-- Filter card -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-hdr">
+    <div class="card-title">Filter Records</div>
+    <div class="card-sub">Set date range, result type and model to narrow records</div>
+  </div>
+  <form id="filter-form" method="get" action="/records">
+    <div class="form-row three">
+      <div class="field">
+        <label>Start Date &amp; Time</label>
+        <input type="datetime-local" name="start" value="{{ start or '' }}" id="start-dt">
+      </div>
+      <div class="field">
+        <label>End Date &amp; Time</label>
+        <input type="datetime-local" name="end" value="{{ end or '' }}" id="end-dt">
+      </div>
+      <div class="field">
+        <label>Result Filter</label>
+        <select name="result_filter">
+          <option value="all" {% if result_filter=='all' %}selected{% endif %}>All Results</option>
+          <option value="Fraudulent" {% if result_filter=='Fraudulent' %}selected{% endif %}>Fraudulent Only</option>
+          <option value="Legitimate" {% if result_filter=='Legitimate' %}selected{% endif %}>Legitimate Only</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row three">
+      <div class="field">
+        <label>Velocity Filter</label>
+        <select name="velocity_filter">
+          <option value="all" {% if velocity_filter=='all' %}selected{% endif %}>All Velocity</option>
+          <option value="HIGH" {% if velocity_filter=='HIGH' %}selected{% endif %}>HIGH Only</option>
+          <option value="MEDIUM" {% if velocity_filter=='MEDIUM' %}selected{% endif %}>MEDIUM Only</option>
+          <option value="LOW" {% if velocity_filter=='LOW' %}selected{% endif %}>LOW Only</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Country</label>
+        <input type="text" name="country_filter" value="{{ country_filter or '' }}" placeholder="e.g. China, Russia...">
+      </div>
+      <div class="field">
+        <label>IP Address</label>
+        <input type="text" name="ip_filter" value="{{ ip_filter or '' }}" placeholder="e.g. 192.168.1.42">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="submit" class="btn btn-primary">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Apply Filters
+      </button>
+      <a href="/records" class="btn btn-outline">
+        <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+        Reset
+      </a>
+      <button type="button" onclick="setQuick('today')" class="btn btn-ghost btn-sm">Today</button>
+      <button type="button" onclick="setQuick('yesterday')" class="btn btn-ghost btn-sm">Yesterday</button>
+      <button type="button" onclick="setQuick('week')" class="btn btn-ghost btn-sm">Last 7 days</button>
+      <button type="button" onclick="setQuick('month')" class="btn btn-ghost btn-sm">Last 30 days</button>
+    </div>
+  </form>
+</div>
+
+<!-- Results summary -->
+<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+  <div class="stat-card">
+    <div class="stat-icon si-blue"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Total Records</div><div class="stat-val">{{ total }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-red"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Fraud</div><div class="stat-val" style="color:var(--acc);">{{ fraud_count }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-grn"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Legitimate</div><div class="stat-val" style="color:var(--grn);">{{ legit_count }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-amb"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Date Range</div><div class="stat-val" style="font-size:13px;color:var(--amb);">{{ date_range }}</div></div>
+  </div>
+</div>
+
+<!-- Download buttons -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-hdr">
+    <div class="card-title">Download Records</div>
+    <div class="card-sub">Download the filtered records as CSV — opens directly</div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a href="{{ download_url }}" class="btn btn-success">
+      <svg viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+      Download Filtered CSV ({{ total }} records)
+    </a>
+    <a href="/download_csv?result_filter=Fraudulent" class="btn btn-danger">
+      <svg viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+      Download Fraud Only
+    </a>
+    <a href="/download_csv" class="btn btn-outline">
+      <svg viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+      Download All Records
+    </a>
+  </div>
+  <div style="margin-top:10px;font-size:11px;color:var(--ink2);">
+    CSV includes: ID, Timestamp, IP, App ID, Device, OS, Channel, Hour, Result, Confidence, Model, Country, Velocity, Signals
+  </div>
+</div>
+
+<!-- Records table -->
+<div class="card">
+  <div class="card-hdr">
+    <div>
+      <div class="card-title">Filtered Records</div>
+      <div class="card-sub">Showing {{ records|length }} of {{ total }} matching records</div>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr style="background:var(--body-bg);">
+          <th style="background:var(--body-bg);"><input type="checkbox" id="chk-all" style="cursor:pointer;" onclick="toggleAll(this)"></th>
+          <th style="background:var(--body-bg);color:var(--blue);">ID</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Timestamp</th>
+          <th style="background:var(--body-bg);color:var(--blue);">IP Address</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Device / OS</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Country</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Hour</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Velocity</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Signals</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Result</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Confidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td><input type="checkbox" class="row-chk" style="cursor:pointer;"></td>
+          <td style="color:var(--ink2);font-size:11px;">#{{ r.id }}</td>
+          <td class="mono" style="white-space:nowrap;font-size:11px;">{{ r.timestamp }}</td>
+          <td class="mono">{{ r.ip }}</td>
+          <td>
+            <div style="font-size:12px;font-weight:500;">{{ r.device }}</div>
+            <div style="font-size:10px;color:var(--ink2);">{{ r.os }}</div>
+          </td>
+          <td style="font-size:12px;">{{ r.country or '—' }}</td>
+          <td style="font-size:12px;">{{ r.hour }}:00</td>
+          <td><span class="badge {% if r.velocity=='HIGH' %}b-danger{% elif r.velocity=='MEDIUM' %}b-warning{% else %}b-default{% endif %}">{{ r.velocity }}</span></td>
+          <td><span style="font-weight:600;font-size:12px;color:{% if r.signals and r.signals > 3 %}var(--acc){% else %}var(--ink2){% endif %};">{{ r.signals or 0 }}</span></td>
+          <td><span class="badge {% if r.result=='Fraudulent' %}b-fraud{% else %}b-legit{% endif %}">{{ r.result }}</span></td>
+          <td>
+            <div class="conf-wrap">
+              <div class="conf-bar"><div class="conf-fill" style="width:{{ r.confidence }}%;background:{% if r.result=='Fraudulent' %}var(--acc){% else %}var(--grn){% endif %};"></div></div>
+              <span style="font-size:11px;font-weight:600;">{{ r.confidence|round(1) }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11" style="text-align:center;padding:40px;color:var(--ink2);">
+          No records match your filters. Try adjusting the date range or clearing filters.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if total > 100 %}
+  <div class="tbl-footer">
+    <div class="pag-info">Showing first 100 of {{ total }} records. Download CSV for complete dataset.</div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function setQuick(period){
+  const now = new Date();
+  const fmt = d => d.toISOString().slice(0,16);
+  const s = document.getElementById('start-dt');
+  const e = document.getElementById('end-dt');
+  e.value = fmt(now);
+  if(period==='today'){
+    const start=new Date(now);start.setHours(0,0,0,0);s.value=fmt(start);
+  } else if(period==='yesterday'){
+    const start=new Date(now);start.setDate(start.getDate()-1);start.setHours(0,0,0,0);
+    const end=new Date(now);end.setDate(end.getDate()-1);end.setHours(23,59,59,0);
+    s.value=fmt(start);e.value=fmt(end);
+  } else if(period==='week'){
+    const start=new Date(now);start.setDate(start.getDate()-7);s.value=fmt(start);
+  } else if(period==='month'){
+    const start=new Date(now);start.setDate(start.getDate()-30);s.value=fmt(start);
+  }
+}
+
+function toggleAll(chk){
+  document.querySelectorAll('.row-chk').forEach(c=>c.checked=chk.checked);
+}
+</script>
+{% endblock %}

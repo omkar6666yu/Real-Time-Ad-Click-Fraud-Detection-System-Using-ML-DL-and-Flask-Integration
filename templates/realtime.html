@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.rt-dot{width:10px;height:10px;border-radius:50%;background:var(--acc);animation:rtp 1.2s infinite;display:inline-block;}
+@keyframes rtp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}
+.conn-live{font-size:10px;font-family:var(--mono);background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;padding:3px 10px;border-radius:4px;text-decoration:none;}
+.conn-wait{font-size:10px;font-family:var(--mono);background:#fef9c3;color:#a16207;border:1px solid #fde68a;padding:3px 10px;border-radius:4px;animation:rtp 1.2s infinite;}
+.rt-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px;}
+.rts{background:#fff;border:1px solid var(--bdr);border-radius:10px;padding:14px 16px;}
+.rts-l{font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;font-weight:600;}
+.rts-v{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--ink);}
+.rts-s{font-size:9px;color:var(--ink2);margin-top:3px;}
+.rt-grid{display:grid;grid-template-columns:1fr 380px;gap:14px;}
+.feed-card{background:#fff;border:1px solid var(--bdr);border-radius:10px;overflow:hidden;}
+.feed-hdr{padding:10px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--body-bg);}
+.feed-hdr-title{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.08em;}
+.feed-body{height:380px;overflow-y:auto;}
+.feed-body::-webkit-scrollbar{width:4px;}
+.feed-body::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px;}
+.feed-tbl{width:100%;border-collapse:collapse;}
+.feed-tbl thead tr{position:sticky;top:0;z-index:2;}
+.feed-tbl thead th{padding:7px 10px;font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;text-align:left;background:var(--body-bg);border-bottom:2px solid var(--bdr);white-space:nowrap;}
+.feed-tbl thead th:last-child{text-align:right;}
+.feed-tbl tbody tr{animation:rowIn .25s ease;}
+.feed-tbl tbody td{padding:6px 10px;border-bottom:1px solid var(--bdr);font-size:11px;vertical-align:middle;}
+@keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.crbdg{font-size:8px;font-family:var(--mono);padding:2px 6px;border-radius:3px;font-weight:700;border:1px solid;}
+.bv{background:#fde8ea;color:#c0152b;border-color:#fecdd3;}
+.bd{background:#fef9c3;color:#a16207;border-color:#fde68a;}
+.bg-b{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+.bt-g{background:#dcfce7;color:#15803d;border-color:#bbf7d0;}
+.bn-p{background:#f3e8ff;color:#7c3aed;border-color:#ddd6fe;}
+.panel-stack{display:flex;flex-direction:column;gap:10px;}
+.panel-card{background:#fff;border:1px solid var(--bdr);border-radius:10px;padding:14px 16px;}
+.panel-title{font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px;}
+.geo-row{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+.geo-name{font-size:11px;color:var(--ink);width:82px;flex-shrink:0;font-weight:500;}
+.geo-bar-wrap{flex:1;height:5px;background:var(--body-bg);border-radius:3px;overflow:hidden;}
+.geo-bar{height:100%;border-radius:3px;background:var(--acc);}
+.geo-count{font-size:10px;font-family:var(--mono);color:var(--ink2);width:24px;text-align:right;}
+.ip-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bdr);}
+.ip-row:last-child{border-bottom:none;}
+.ip-addr{font-family:var(--mono);font-size:11px;color:var(--ink);font-weight:500;}
+.ip-hits{font-size:10px;font-family:var(--mono);color:var(--acc);font-weight:700;}
+.sig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
+.sig-item{background:var(--body-bg);border:1px solid var(--bdr);border-radius:6px;padding:7px 8px;}
+.sig-id{font-size:7px;font-family:var(--mono);color:var(--ink2);margin-bottom:2px;font-weight:600;}
+.sig-count{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ink);}
+.sig-count.hot{color:var(--acc);}
+.sig-name{font-size:8px;color:var(--ink2);margin-top:1px;}
+.ticker{background:#fde8ea;border:1px solid #fecdd3;border-radius:7px;padding:8px 14px;font-size:11px;color:var(--acc);font-family:var(--mono);display:none;margin-bottom:10px;font-weight:600;}
+.ticker.show{display:block;}
+.ai-fab{position:fixed;bottom:28px;right:28px;z-index:999;}
+.ai-fab-btn{width:52px;height:52px;border-radius:50%;background:var(--pur);border:2px solid rgba(139,92,246,.3);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(139,92,246,.35);}
+.ai-fab-btn:hover{transform:scale(1.08);}
+.ai-chat-box{position:fixed;bottom:92px;right:28px;width:340px;background:#fff;border:1px solid rgba(139,92,246,.25);border-radius:14px;overflow:hidden;z-index:999;display:none;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.12);}
+.ai-chat-box.open{display:flex;}
+.ai-chat-head{background:var(--body-bg);padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;}
+.ai-chat-title{font-size:13px;font-weight:600;color:var(--pur);display:flex;align-items:center;gap:7px;}
+.ai-close{background:none;border:none;color:var(--ink2);cursor:pointer;font-size:16px;padding:0;}
+.ai-msgs{height:260px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.ai-msg{max-width:90%;padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.5;}
+.ai-msg.bot{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.15);color:var(--pur);align-self:flex-start;border-radius:4px 10px 10px 10px;}
+.ai-msg.user{background:var(--body-bg);border:1px solid var(--bdr);color:var(--ink);align-self:flex-end;border-radius:10px 4px 10px 10px;}
+.ai-msg.thinking{color:var(--ink2);font-style:italic;}
+.ai-input-row{padding:10px 12px;border-top:1px solid var(--bdr);display:flex;gap:6px;}
+.ai-input{flex:1;background:var(--body-bg);border:1px solid var(--bdr2);border-radius:7px;padding:8px 11px;color:var(--ink);font-size:12px;outline:none;}
+.ai-input:focus{border-color:var(--pur);}
+.ai-send{background:var(--pur);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:12px;cursor:pointer;}
+.ai-qrow{padding:6px 12px 0;display:flex;gap:5px;flex-wrap:wrap;}
+.ai-qbtn{font-size:10px;padding:3px 8px;border-radius:12px;background:rgba(139,92,246,.08);color:var(--pur);border:1px solid rgba(139,92,246,.2);cursor:pointer;white-space:nowrap;}
+.ai-qbtn:hover{background:var(--pur);color:#fff;}
+</style>
+
+<div style="padding:0 0 20px;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+    <div>
+      <div style="font-size:18px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:10px;">
+        <span class="rt-dot"></span> Live Fraud Monitor
+      </div>
+      <div style="font-size:12px;color:var(--ink2);margin-top:3px;">Real-time click stream from ShopNova — all 18 fraud signals detected per click</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="conn-badge" class="conn-wait">CONNECTING...</span>
+      <a href="/dashboard" class="btn btn-outline btn-sm">Dashboard</a>
+      <a href="/logs" class="btn btn-outline btn-sm">All logs</a>
+    </div>
+  </div>
+  <div class="ticker" id="alert-ticker"></div>
+  <div class="rt-stats">
+    <div class="rts"><div class="rts-l">Total clicks</div><div class="rts-v" id="rt-total">0</div><div class="rts-s">this session</div></div>
+    <div class="rts"><div class="rts-l">Fraud</div><div class="rts-v" style="color:var(--acc)" id="rt-fraud">0</div><div class="rts-s" id="rt-rate">0.0% rate</div></div>
+    <div class="rts"><div class="rts-l">Legitimate</div><div class="rts-v" style="color:var(--grn)" id="rt-legit">0</div><div class="rts-s">cleared</div></div>
+    <div class="rts"><div class="rts-l">Signals fired</div><div class="rts-v" style="color:var(--amb)" id="rt-sigs">0</div><div class="rts-s">across all clicks</div></div>
+    <div class="rts"><div class="rts-l">Clicks/min</div><div class="rts-v" id="rt-cpm">0</div><div class="rts-s">last 60s</div></div>
+  </div>
+  <div class="rt-grid">
+    <div class="feed-card">
+      <div class="feed-hdr">
+        <div class="feed-hdr-title">Live click stream with fraud signals</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span id="feed-count" style="font-size:10px;color:var(--ink2);font-family:var(--mono);">0 clicks</span>
+          <button onclick="clearFeed()" class="btn btn-ghost btn-sm">Clear</button>
+        </div>
+      </div>
+      <div class="feed-body" id="feed-body">
+        <table class="feed-tbl">
+          <thead>
+            <tr>
+              <th style="width:18px;"></th>
+              <th>IP Address</th>
+              <th>Result</th>
+              <th>Signals</th>
+              <th>Country</th>
+              <th style="text-align:right;">Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="feed-tbody">
+            <tr>
+              <td colspan="6" style="text-align:center;padding:28px;color:var(--ink2);font-size:12px;">
+                Waiting for ShopNova clicks...<br><span style="font-size:10px;opacity:.6;">Open shopnova.html and trigger any feature</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel-stack">
+      <div class="panel-card">
+        <div class="panel-title">18 Fraud Signal Hit Counter</div>
+        <div class="sig-grid" id="sig-grid"></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-title">Top fraud IPs</div>
+        <div id="top-ips"><div style="font-size:11px;color:var(--ink2);">No fraud detected yet</div></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-title">Fraud by country</div>
+        <div id="geo-breakdown"><div style="font-size:11px;color:var(--ink2);">No data yet</div></div>
+      </div>
+      <div class="panel-card" style="background:rgba(139,92,246,.05);border-color:rgba(139,92,246,.2);">
+        <div class="panel-title" style="color:var(--pur);">AI quick query</div>
+        <div class="ai-qrow" style="padding:0 0 8px 0;">
+          <button class="ai-qbtn" onclick="quickAI('What is the fraud rate and top fraud signal?')">Fraud summary</button>
+          <button class="ai-qbtn" onclick="quickAI('Which IP is most suspicious? Should I block it?')">Top suspect</button>
+          <button class="ai-qbtn" onclick="quickAI('Check if fraud spiking, send alert if needed.')">Check + alert</button>
+        </div>
+        <div id="quick-ai-res" style="font-size:11px;color:var(--pur);line-height:1.6;display:none;background:rgba(139,92,246,.06);border-radius:6px;padding:8px 10px;max-height:80px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ai-fab">
+  <div class="ai-chat-box" id="ai-chat-box">
+    <div class="ai-chat-head">
+      <div class="ai-chat-title">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--pur);display:inline-block;animation:rtp 1.5s infinite;"></span>
+        AI fraud agent
+      </div>
+      <button class="ai-close" onclick="toggleChat()">&#215;</button>
+    </div>
+    <div class="ai-qrow">
+      <button class="ai-qbtn" onclick="fillQ('What is the current fraud rate?')">Fraud rate</button>
+      <button class="ai-qbtn" onclick="fillQ('Which IPs should I block?')">Block IPs</button>
+      <button class="ai-qbtn" onclick="fillQ('Generate a fraud report for today.')">Report</button>
+      <button class="ai-qbtn" onclick="fillQ('Send a fraud spike alert now.')">Alert</button>
+    </div>
+    <div class="ai-msgs" id="ai-msgs">
+      <div class="ai-msg bot">Hi! I am watching your live click stream with all 18 fraud signals. Ask me anything about what you are seeing.</div>
+    </div>
+    <div class="ai-input-row">
+      <input class="ai-input" id="ai-input" placeholder="Ask about fraud patterns..." onkeydown="if(event.key==='Enter')sendAI()">
+      <button class="ai-send" onclick="sendAI()">&#9654;</button>
+    </div>
+  </div>
+  <button class="ai-fab-btn" onclick="toggleChat()" title="AI Fraud Agent">🤖</button>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const SIG_NAMES={1:'Click-burst',2:'Abnormal CTR',3:'Device mismatch',4:'Impossible geo',5:'Subnet IPs',6:'Interclick',7:'Night activity',8:'UA entropy',9:'Subnet count',10:'Click variance',11:'Duplicate UA',12:'CPI ratio',13:'Hour cyclic',14:'Clicks/min',15:'Distinct UA',16:'IP total',17:'Subnet clicks',18:'Short ICI'};
+const sigMap={};
+const sg=document.getElementById('sig-grid');
+for(let i=1;i<=18;i++){
+  const d=document.createElement('div');d.className='sig-item';d.id='sgi-'+i;
+  d.innerHTML=`<div class="sig-id">F${String(i).padStart(2,'0')}</div><div class="sig-count" id="sc-${i}">0</div><div class="sig-name">${SIG_NAMES[i]}</div>`;
+  sg.appendChild(d);
+}
+let total=0,fraud=0,legit=0,totalSigs=0,lastId=0;
+let ipMap={},geoMap={},recentTs=[];
+let chatOpen=false;
+const es=new EventSource('/api/stream');
+es.onopen=()=>{const b=document.getElementById('conn-badge');b.textContent='LIVE';b.className='conn-live';};
+es.onerror=()=>{const b=document.getElementById('conn-badge');b.textContent='RECONNECTING...';b.className='conn-wait';};
+es.onmessage=(e)=>{const c=JSON.parse(e.data);if(c.id<=lastId)return;lastId=c.id;processClick(c);};
+function processClick(c){
+  const isFraud=c.result==='Fraudulent';
+  total++;if(isFraud)fraud++;else legit++;
+  recentTs.push(Date.now());recentTs=recentTs.filter(t=>Date.now()-t<60000);
+  const sc=c.signals||0;totalSigs+=sc;
+  if(isFraud){ipMap[c.ip]=(ipMap[c.ip]||0)+1;geoMap[c.country]=(geoMap[c.country]||0)+1;}
+  const fired=guessSignals(c);
+  fired.forEach(si=>{sigMap[si]=(sigMap[si]||0)+1;const el=document.getElementById('sc-'+si);if(el){el.textContent=sigMap[si];el.className='sig-count'+(sigMap[si]>5?' hot':'');}});
+  updateStats();addRow(c,fired);updateTopIPs();updateGeo();checkAlert();
+  document.getElementById('feed-count').textContent=total+' clicks';
+}
+function guessSignals(c){
+  const s=[];
+  if((c.velocity_count||0)>20)s.push(1,14);
+  if(c.device==='Desktop'&&(c.os==='Android'||c.os==='iOS'))s.push(3);
+  if(c.hour>=0&&c.hour<=5)s.push(7,13);
+  if(c.velocity==='HIGH')s.push(6,18);
+  if(c.signals>0)s.push(5,9,17);
+  return[...new Set(s)];
+}
+function addRow(c,sigs){
+  const tbody=document.getElementById('feed-tbody');
+  const ph=tbody.querySelector('td[colspan]');if(ph)ph.closest('tr').remove();
+  const isFraud=c.result==='Fraudulent';
+  const cat=(si)=>{if([1,2,6,10,12,14,16,18].includes(si))return'bv';if([3,8,11,15].includes(si))return'bd';if([4].includes(si))return'bg-b';if([7,13].includes(si))return'bt-g';return'bn-p';};
+  const r=document.createElement('tr');
+  r.innerHTML=`
+    <td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${isFraud?'var(--acc)':'var(--grn)'}"></span></td>
+    <td style="font-family:var(--mono);font-weight:500;white-space:nowrap;">${c.ip}</td>
+    <td><span class="crbdg ${isFraud?'bv':'bt-g'}">${c.result.toUpperCase()}</span></td>
+    <td><div style="display:flex;flex-wrap:wrap;gap:3px;">${sigs.map(si=>`<span class="crbdg ${cat(si)}">F${String(si).padStart(2,'0')}</span>`).join('')}${c.velocity==='HIGH'?'<span class="crbdg bv">HIGH</span>':''}</div></td>
+    <td>${c.country&&c.country!=='Unknown'?`<span class="crbdg bg-b">${c.country}</span>`:'—'}</td>
+    <td style="text-align:right;font-family:var(--mono);font-weight:600;color:${isFraud?'var(--acc)':'var(--grn)'};">${c.confidence}%</td>`;
+  tbody.insertBefore(r,tbody.firstChild);
+  while(tbody.children.length>80)tbody.removeChild(tbody.lastChild);
+}
+function updateStats(){
+  document.getElementById('rt-total').textContent=total;
+  document.getElementById('rt-fraud').textContent=fraud;
+  document.getElementById('rt-legit').textContent=legit;
+  document.getElementById('rt-sigs').textContent=totalSigs;
+  document.getElementById('rt-rate').textContent=(total>0?(fraud/total*100).toFixed(1):0)+'% rate';
+  document.getElementById('rt-cpm').textContent=recentTs.length;
+}
+function updateTopIPs(){
+  const s=Object.entries(ipMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const el=document.getElementById('top-ips');if(!s.length)return;
+  el.innerHTML=s.map(([ip,n])=>`<div class="ip-row"><div class="ip-addr">${ip}</div><div class="ip-hits">${n} hits</div></div>`).join('');
+}
+function updateGeo(){
+  const s=Object.entries(geoMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const el=document.getElementById('geo-breakdown');if(!s.length)return;
+  const max=s[0][1];
+  el.innerHTML=s.map(([c,n])=>`<div class="geo-row"><div class="geo-name">${c}</div><div class="geo-bar-wrap"><div class="geo-bar" style="width:${Math.round(n/max*100)}%"></div></div><div class="geo-count">${n}</div></div>`).join('');
+}
+function checkAlert(){
+  if(total>0&&total%20===0&&fraud/total*100>60){
+    const t=document.getElementById('alert-ticker');
+    t.textContent=`🚨 FRAUD SPIKE: ${(fraud/total*100).toFixed(1)}% rate in last ${total} clicks`;
+    t.classList.add('show');setTimeout(()=>t.classList.remove('show'),6000);
+  }
+}
+function clearFeed(){
+  document.getElementById('feed-tbody').innerHTML=`<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--ink2);font-size:12px;">Feed cleared</td></tr>`;
+  total=fraud=legit=totalSigs=0;recentTs=[];Object.keys(ipMap).forEach(k=>delete ipMap[k]);Object.keys(geoMap).forEach(k=>delete geoMap[k]);
+  updateStats();document.getElementById('feed-count').textContent='0 clicks';
+  for(let i=1;i<=18;i++){sigMap[i]=0;const el=document.getElementById('sc-'+i);if(el){el.textContent='0';el.className='sig-count';}}
+}
+function toggleChat(){chatOpen=!chatOpen;document.getElementById('ai-chat-box').classList.toggle('open',chatOpen);}
+function fillQ(q){document.getElementById('ai-input').value=q;document.getElementById('ai-input').focus();}
+function addMsg(t,r){const msgs=document.getElementById('ai-msgs');const d=document.createElement('div');d.className='ai-msg '+r;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
+async function sendAI(){
+  const inp=document.getElementById('ai-input');const q=inp.value.trim();if(!q)return;inp.value='';addMsg(q,'user');
+  const th=addMsg('Thinking...','bot thinking');
+  try{const r=await fetch('/agent/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});const d=await r.json();th.textContent=d.response||'No response';th.className='ai-msg bot';}
+  catch{th.textContent='Error — set ANTHROPIC_API_KEY to enable.';th.className='ai-msg bot';}
+}
+async function quickAI(q){
+  const el=document.getElementById('quick-ai-res');el.textContent='Agent thinking...';el.style.display='block';
+  try{const r=await fetch('/agent/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});const d=await r.json();el.textContent=d.response||'No response';}
+  catch{el.textContent='Set ANTHROPIC_API_KEY to enable AI agent.';}
+}
+</script>
+{% endblock %}

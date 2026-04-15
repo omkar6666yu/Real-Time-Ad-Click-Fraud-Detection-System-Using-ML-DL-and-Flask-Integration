@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hdr">
+  <div><div class="page-title">User Activity</div><div class="page-sub">Admin view — all user actions, predictions and agent queries</div></div>
+</div>
+<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon si-blue"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Registered users</div><div class="stat-val">{{ users|length }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-red"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+    <div class="stat-body"><div class="stat-label">Total predictions</div><div class="stat-val">{{ recent_preds|length }}</div><div class="stat-trend">last 100</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon si-pur"><svg viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg></div>
+    <div class="stat-body"><div class="stat-label">AI agent queries</div><div class="stat-val">{{ agent_logs|length }}</div></div>
+  </div>
+</div>
+<div class="two-col">
+  <div class="card">
+    <div class="card-title">User accounts</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="background:var(--body-bg);color:var(--blue);">Username</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Role</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Email</th>
+          <th style="background:var(--body-bg);color:var(--blue);">Created</th>
+        </tr></thead>
+        <tbody>{% for u in users %}<tr>
+          <td style="font-weight:500;">{{ u.username }}</td>
+          <td>{% if u.role=='admin' %}<span class="badge b-warning">ADMIN</span>{% else %}<span class="badge b-default">USER</span>{% endif %}</td>
+          <td style="font-size:11px;color:var(--ink2);">{{ u.email or '—' }}</td>
+          <td style="font-size:11px;color:var(--ink2);">{{ u.created }}</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Recent AI agent queries</div>
+    {% if agent_logs %}
+    {% for log in agent_logs %}
+    <div style="padding:8px 0;border-bottom:1px solid var(--bdr);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+        <div style="font-size:11px;color:var(--ink2);">{{ log.timestamp }}</div>
+        <span class="badge b-default">{{ log.tool_calls }} tools</span>
+      </div>
+      <div style="font-size:12px;color:var(--ink);">{{ log.query[:80] }}{% if log.query|length > 80 %}...{% endif %}</div>
+    </div>{% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--ink2);">No agent queries yet</div>
+    {% endif %}
+  </div>
+</div>
+<div class="card" style="margin-top:14px;">
+  <div class="card-title">Recent prediction activity (last 100)</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th style="background:var(--body-bg);color:var(--blue);">Time</th>
+        <th style="background:var(--body-bg);color:var(--blue);">IP</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Device</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Country</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Result</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Confidence</th>
+        <th style="background:var(--body-bg);color:var(--blue);">Model</th>
+      </tr></thead>
+      <tbody>{% for p in recent_preds %}<tr>
+        <td class="mono" style="font-size:11px;color:var(--ink2);">{{ p.timestamp[11:16] }}</td>
+        <td class="mono" style="font-size:11px;">{{ p.ip }}</td>
+        <td style="font-size:11px;">{{ p.device }}</td>
+        <td style="font-size:11px;">{{ p.country }}</td>
+        <td>{% if p.result=='Fraudulent' %}<span class="badge b-fraud">FRAUD</span>{% else %}<span class="badge b-legit">LEGIT</span>{% endif %}</td>
+        <td class="mono" style="font-size:11px;">{{ (p.confidence or 0)|round(1) }}%</td>
+        <td style="font-size:11px;color:var(--ink2);">{{ p.model_used }}</td>
+      </tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
