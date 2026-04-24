@@ -10,7 +10,8 @@
       <select id="model-select"><option>Stacking Classifier</option><option>LightGBM</option><option>XGBoost</option><option>Random Forest</option><option>LSTM</option><option>GRU</option><option>ANN</option><option>SVM</option><option>Logistic Regression</option></select>
     </div>
     <div class="form-row">
-      <div class="field"><label>IP address</label><input id="ip" value="192.168.1.42"></div>
+      
+      <div class="field"><label>IP address</label><input id="ip" id="ip-field" placeholder="Fetching your IP..." value=""></div>
       <div class="field"><label>App ID</label><input id="app_id" value="3521"></div>
       <div class="field"><label>Device</label><select id="device"><option>Mobile</option><option>Tablet</option><option>Desktop</option></select></div>
       <div class="field"><label>OS</label><select id="os"><option>Android</option><option>iOS</option><option>Windows</option></select></div>
@@ -52,6 +53,42 @@
 function runPredict(){
   const btn=document.getElementById('pred-btn');
   btn.textContent='Analysing...';btn.disabled=true;
+/////////////////////////// Auto-fill real public IP on page load
+fetch('https://api.ipify.org?format=json')
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById('ip').value = d.ip;
+    document.getElementById('ip').placeholder = d.ip;
+  })
+  .catch(() => {
+    document.getElementById('ip').value = '127.0.0.1';
+  });
+
+  // Auto-detect real device, OS, and current hour
+(function(){
+  const ua = navigator.userAgent;
+  // Device
+  let device = 'Desktop';
+  if(/tablet|ipad|playbook|silk/i.test(ua)) device = 'Tablet';
+  else if(/mobile|android|iphone|ipod|blackberry|opera mini|iemobile/i.test(ua)) device = 'Mobile';
+  const dSel = document.getElementById('device');
+  for(let i=0; i<dSel.options.length; i++){
+    if(dSel.options[i].value === device){ dSel.selectedIndex = i; break; }
+  }
+  // OS
+  let os = 'Windows';
+  if(/android/i.test(ua))           os = 'Android';
+  else if(/iphone|ipad|ios/i.test(ua)) os = 'iOS';
+  else if(/mac os x/i.test(ua))     os = 'macOS';
+  else if(/linux/i.test(ua))        os = 'Linux';
+  const oSel = document.getElementById('os');
+  for(let i=0; i<oSel.options.length; i++){
+    if(oSel.options[i].value === os){ oSel.selectedIndex = i; break; }
+  }
+  // Hour — real current hour
+  document.getElementById('hour').value = new Date().getHours();
+})();
+////////////////////////////////////////////////////////////
   fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
     ip:document.getElementById('ip').value,app_id:document.getElementById('app_id').value,
     device:document.getElementById('device').value,os:document.getElementById('os').value,

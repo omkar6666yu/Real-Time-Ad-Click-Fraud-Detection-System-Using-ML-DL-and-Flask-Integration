@@ -178,8 +178,8 @@ class Prediction(db.Model):
     velocity   = db.Column(db.String(10), default='LOW')
     signals    = db.Column(db.Integer, default=0)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    marked     = db.Column(db.String(20), default='')   # 'reviewed', 'blocked', 'whitelisted', ''
-    notes      = db.Column(db.String(200), default='')
+    marked     = db.Column(db.String(20), default='')   # 'reviewed','blocked','whitelisted',''
+    notes      = db.Column(db.String(300), default='')
 
     def to_dict(self):
         return {'id':self.id,'timestamp':self.timestamp,'ip':self.ip,
@@ -188,7 +188,7 @@ class Prediction(db.Model):
                 'confidence':round(self.confidence or 0, 1),'model_used':self.model_used,
                 'country':self.country or 'Unknown','velocity':self.velocity or 'LOW',
                 'signals':self.signals or 0,
-                'marked':self.marked or '', 'notes':self.notes or ''}  # ADD THIS LINE
+                'marked':self.marked or '','notes':self.notes or ''}
 
 class DriftLog(db.Model):
     id        = db.Column(db.Integer, primary_key=True)
@@ -232,45 +232,35 @@ class TrackedWebsite(db.Model):
 def load_user(uid): return User.query.get(int(uid))
 
 # ── GeoIP ──────────────────────────────────────────────────────────────────────
-###################################################################################################################################################
-"""
-def get_country(ip):
-    try:
-        import geoip2.database
-        with geoip2.database.Reader('GeoLite2-Country.mmdb') as r:
-            return r.country(ip).country.name or 'Unknown'
-    except:
-        countries = [
-            'United States','United Kingdom','Germany','France','Canada',
-            'Australia','India','Brazil','Japan','Singapore','Netherlands',
-            'Russia','China','Vietnam','Indonesia','South Korea','Mexico',
-            'Spain','Italy','Poland','Sweden','Turkey','Argentina','Ukraine',
-            'Thailand','Philippines','Pakistan','Bangladesh','Nigeria','Egypt'
-        ]
-        try:
-            parts = ip.split('.')
-            idx = (int(parts[0]) * 31 + int(parts[1]) * 7 + int(parts[2])) % len(countries)
-            return countries[idx]
-        except:
-            return 'Unknown'  """  ###chanedtooo>>
-def get_country(ip):
-    # Known private/LAN ranges — return immediately, no lookup needed
-    private_prefixes = ('10.', '172.16.', '172.17.', '172.18.', '172.19.',
-                        '172.20.', '172.21.', '172.22.', '172.23.', '172.24.',
-                        '172.25.', '172.26.', '172.27.', '172.28.', '172.29.',
-                        '172.30.', '172.31.', '192.168.', '127.', '0.', '::1')
-    if not ip or ip == '0.0.0.0' or any(ip.startswith(p) for p in private_prefixes):
-        return 'Local / LAN'
+# CURRENT (wrong) - delete from "def get_country" to the last "return 'Unknown'"
+# Private IP ranges — GeoIP cannot resolve these
+_PRIVATE = (
+    '127.', '0.', '::1',
+    '10.',
+    '192.168.',
+    '172.16.','172.17.','172.18.','172.19.',
+    '172.20.','172.21.','172.22.','172.23.',
+    '172.24.','172.25.','172.26.','172.27.',
+    '172.28.','172.29.','172.30.','172.31.',
+    '169.254.',
+)
 
+def get_country(ip):
+    if not ip or ip == '0.0.0.0':
+        return 'Unknown'
+    # Private/loopback IPs have no country — return honest label
+    if any(ip.startswith(p) for p in _PRIVATE):
+        return 'Local / LAN'
     try:
         import geoip2.database
         with geoip2.database.Reader('GeoLite2-Country.mmdb') as r:
-            result = r.country(ip).country.name
-            return result if result else 'Unknown'
+            name = r.country(ip).country.name
+            return name if name else 'Unknown'
     except Exception:
-        # Honest fallback — do not fake with a hash
+        # geoip2 not installed or IP not in database — return honest Unknown
+        # DO NOT use hash formula which returns random fake country names
         return 'Unknown'
-#####################################################################################################################################3
+#3#############################################################################################################################3
 
 # ── ML PREDICTION ──────────────────────────────────────────────────────────────
 MODEL_METRICS = {
@@ -318,28 +308,10 @@ try:
         try:
             if not NUMPY_OK:
                 return mock_predict(ip, app_id, device, os_name, channel, hour, fired, velocity)
-            #feats = [int(ip.split('.')[0]) if ip else 0,
-            #         int(app_id) if str(app_id).isdigit() else 0,
-            #         0, 0, int(channel) if str(channel).isdigit() else 0,
-            #         hour, 0, 0, 0, 0, 0, 0, 0, 0]
             feats = [int(ip.split('.')[0]) if ip else 0,
-                     int(ip.split('.')[1]) if ip and len(ip.split('.'))>1 else 0,
-                     int(ip.split('.')[2]) if ip and len(ip.split('.'))>2 else 0,
-                     int(ip.split('.')[3]) if ip and len(ip.split('.'))>3 else 0,
                      int(app_id) if str(app_id).isdigit() else 0,
-                     int(channel) if str(channel).isdigit() else 0,
-                     hour,
-                     0,  # device_mismatch
-                     0,  # impossible_geo
-                     0,  # night_activity
-                     0,  # short_ici
-                     0,  # dup_ua_flag
-                     0,  # subnet_ip_count
-                     0,  # ctr
-                     0,  # mean_interval
-                     0,  # click_variance
-                     0,  # ua_entropy
-                     0]  # velocity_risk
+                     0, 0, int(channel) if str(channel).isdigit() else 0,
+                     hour, 0, 0, 0, 0, 0, 0, 0, 0]
             X = numpy.array(feats).reshape(1, -1)
             prob = _model.predict_proba(X)[0][1]
             return ('Fraudulent' if prob > 0.5 else 'Legitimate'), round(prob*100, 1)
@@ -618,67 +590,33 @@ User question: {user_message}
 Answer concisely and cite the numbers above. Be actionable."""
 ####################################################################################################################################################
     
+##########################################################################################################################33
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
         payload = json.dumps({
             "contents": [{"parts": [{"text": prompt}]}]
         }).encode()
 
-        import socket as _socket
+        # Retry up to 3 times with 2s wait on rate limit
         last_err = None
         data = None
-        for attempt in range(2):
+        for attempt in range(3):
             try:
                 req = urllib.request.Request(url, payload, {'Content-Type': 'application/json'})
-                resp = urllib.request.urlopen(req, timeout=25)
+                resp = urllib.request.urlopen(req, timeout=15)
                 data = json.loads(resp.read().decode())
                 break
-            except urllib.error.HTTPError as ex:
-                last_err = str(ex)
-                if ex.code == 429:
-                    # Rate limited — no point retrying immediately, fail fast with friendly message
-                    body = ex.read().decode(errors='ignore')
-                    return (
-                        "⚠ Gemini free-tier rate limit reached (429 Too Many Requests).\n\n"
-                        "This is normal for the free Gemini API key. Please wait 1 minute and try again.\n\n"
-                        "Tip: Add an Anthropic API key in Set API Keys for unlimited agent queries."
-                    ), 0
-                else:
-                    last_err = f"HTTP {ex.code}: {ex.reason}"
-                    break
-            except (_socket.timeout, TimeoutError):
-                last_err = "timeout"
-                if attempt < 1:
-                    time.sleep(1)
-                    continue
-                return (
-                    "⚠ Gemini took too long to respond (request timed out).\n\n"
-                    "This can happen when the Gemini API is under load. Please try again in a moment.\n\n"
-                    "Tip: Add an Anthropic API key in Set API Keys for a faster, more reliable agent."
-                ), 0
             except Exception as ex:
                 last_err = str(ex)
-                if 'timed out' in last_err.lower() or 'timeout' in last_err.lower():
-                    return (
-                        "⚠ Gemini took too long to respond (request timed out).\n\n"
-                        "This can happen when the Gemini API is under load. Please try again in a moment.\n\n"
-                        "Tip: Add an Anthropic API key in Set API Keys for a faster, more reliable agent."
-                    ), 0
-                break
+                if '429' in last_err or 'quota' in last_err.lower():
+                    time.sleep(2)
+                else:
+                    raise ex
 
         if data is None:
-            return (
-                f"⚠ Gemini request failed: {last_err}.\n\n"
-                "Please try again. If this keeps happening, add an Anthropic API key in Set API Keys."
-            ), 0
+            return f"Gemini rate limit hit. Wait 1 minute and try again. ({last_err})", 0
 
-        # Handle cases where Gemini returns a blocked/empty response
-        try:
-            answer = data['candidates'][0]['content']['parts'][0]['text']
-        except (KeyError, IndexError):
-            return (
-                "⚠ Gemini returned an empty response. Please rephrase your query and try again."
-            ), 0
+        answer = data['candidates'][0]['content']['parts'][0]['text']
         #########################################################################################################################
 
         if user_id:
@@ -697,21 +635,7 @@ Answer concisely and cite the numbers above. Be actionable."""
         return answer, 0
 
     except Exception as e:
-        e_str = str(e).lower()
-        if 'timed out' in e_str or 'timeout' in e_str:
-            return (
-                "⚠ Gemini took too long to respond (request timed out).\n\n"
-                "Please try again. If this keeps happening, add an Anthropic API key in Set API Keys."
-            ), 0
-        elif '429' in e_str or 'quota' in e_str or 'rate' in e_str:
-            return (
-                "⚠ Gemini free-tier rate limit reached (429 Too Many Requests).\n\n"
-                "Please wait 1 minute and try again, or add an Anthropic API key in Set API Keys."
-            ), 0
-        return (
-            f"⚠ Gemini agent error: {e}\n\n"
-            "Please try again. You can also add an Anthropic API key in Set API Keys for a more reliable agent."
-        ), 0
+        return f"Gemini error: {e}", 0
 
 
 def _run_agent_local(user_message, user_id=None):
@@ -786,7 +710,12 @@ def index(): return render_template('index.html')
 @login_required
 def predict():
     data = request.json
-    ip, app_id    = data.get('ip',''), data.get('app_id','')
+    ######################################################################################################
+    ip     = (data.get('ip','').strip() or
+          request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
+          request.remote_addr or '127.0.0.1')
+    app_id = data.get('app_id','')
+    #####################################################################################################3
     device, os_n  = data.get('device','Mobile'), data.get('os','Android')
     channel, hour = data.get('channel',''), int(data.get('hour',12))
     ua            = data.get('user_agent','')
@@ -1160,14 +1089,10 @@ def api_track():
     except:
         db.session.rollback()
 
-    #ip = (request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
-    #     request.headers.get('X-Real-IP','').strip() or
-    #     request.headers.get('CF-Connecting-IP','') or
-    #      request.remote_addr or '0.0.0.0')
-    ip = (data.get('ip','').strip() or
-      request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
-      request.headers.get('X-Real-IP','').strip() or
-      request.remote_addr or '0.0.0.0')
+    ip = (request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
+          request.headers.get('X-Real-IP','').strip() or
+          request.headers.get('CF-Connecting-IP','') or
+          request.remote_addr or '0.0.0.0')
 
     device  = data.get('device', 'Desktop')
     os_name = data.get('os', 'Windows')
@@ -1216,13 +1141,10 @@ def api_predict():
         description: Prediction result with confidence and fraud signals
     """
     data    = request.json or {}
-    ip      = data.get('ip','')
-    # AFTER — use client's real IP when none is sent
-    # AFTER — use client's real IP when none is sent
     ip = (data.get('ip','').strip() or
-        request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
-        request.remote_addr or '0.0.0.0')
- 
+           request.headers.get('X-Forwarded-For','').split(',')[0].strip() or
+           request.headers.get('X-Real-IP','').strip() or
+           request.remote_addr or '0.0.0.0')
     app_id  = data.get('app_id','')
     device  = data.get('device','Mobile')
     os_name = data.get('os','Android')
@@ -1382,8 +1304,9 @@ def download_csv():
         mimetype='text/csv',
         headers={'Content-Disposition': f'attachment; filename={filename}'}
     )
-###############################################################################################################################################################
-# ── LOG ACTIONS ────────────────────────────────────────────────────────────────
+
+
+# ── LOG ACTION ROUTES ──────────────────────────────────────────────────────────
 @app.route('/logs/delete/<int:pid>', methods=['POST'])
 @login_required
 def log_delete(pid):
@@ -1397,10 +1320,11 @@ def log_delete(pid):
 @login_required
 def log_mark(pid):
     p     = Prediction.query.get_or_404(pid)
-    mark  = request.json.get('mark', '')   # 'reviewed' | 'blocked' | 'whitelisted' | ''
-    notes = request.json.get('notes', p.notes or '')
-    p.marked = mark
-    p.notes  = notes
+    data  = request.json or {}
+    if 'mark' in data:
+        p.marked = data['mark']
+    if 'notes' in data:
+        p.notes = data['notes']
     db.session.commit()
     return jsonify({'ok': True, 'marked': p.marked, 'notes': p.notes})
 
@@ -1408,7 +1332,7 @@ def log_mark(pid):
 @app.route('/logs/delete_bulk', methods=['POST'])
 @login_required
 def log_delete_bulk():
-    ids = request.json.get('ids', [])
+    ids = (request.json or {}).get('ids', [])
     if ids:
         Prediction.query.filter(Prediction.id.in_(ids)).delete(synchronize_session=False)
         db.session.commit()
@@ -1420,7 +1344,7 @@ def log_delete_bulk():
 def log_detail(pid):
     p = Prediction.query.get_or_404(pid)
     return jsonify(p.to_dict())
-#########################################################################################################################################################################
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

@@ -385,7 +385,7 @@ function ri(n){return Math.floor(Math.random()*n);}
 function pick(a){return a[ri(a.length)];}
 function mkBot(ip,hour){return{ip,app_id:pick(['3521','892','1204','4401']),device:'Mobile',os:'Android',channel:pick(['213','88','45','102']),hour};}
 
-const HUM=['203.45.12.8','176.32.91.4','98.12.45.67','64.233.160.1','185.60.216.35'];
+//const HUM=['203.45.12.8','176.32.91.4','98.12.45.67','64.233.160.1','185.60.216.35'];
 const GHRS=[9,10,11,14,15,16,17,18,20];
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //const DEVS=['Mobile','Desktop','Tablet'];
@@ -406,7 +406,26 @@ function getRealOS(){
   if(/linux/i.test(ua))    return 'Linux';
   return 'Unknown';
 }
-function hPay(){return{app_id:String(ri(5000)+100),device:getRealDevice(),os:getRealOS(),channel:String(ri(400)+10),hour:new Date().getHours(),source:'shopnova-human',user_agent:navigator.userAgent};}
+//function hPay(){return{app_id:String(ri(5000)+100),device:getRealDevice(),os:getRealOS(),channel:String(ri(400)+10),hour:new Date().getHours(),source:'shopnova-human',user_agent:navigator.userAgent};}
+// Cache real public IP once on load
+let _realIP = '127.0.0.1';
+fetch('https://api.ipify.org?format=json')
+  .then(r => r.json())
+  .then(d => { _realIP = d.ip; console.log('[ShopNova] Real IP:', _realIP); })
+  .catch(() => { _realIP = '127.0.0.1'; });
+
+function hPay(){
+  return {
+    ip:           _realIP,          // ← real public IP fetched above
+    app_id:       String(ri(5000)+100),
+    device:       getRealDevice(),
+    os:           getRealOS(),
+    channel:      String(ri(400)+10),
+    hour:         new Date().getHours(),
+    source:       'shopnova-human',
+    user_agent:   navigator.userAgent
+  };
+} //
 // Build floating trigger panel (replaces sidebar panel)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const trigPanel=document.createElement('div');
